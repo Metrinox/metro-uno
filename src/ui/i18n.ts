@@ -1,0 +1,271 @@
+import type { LocalizedName } from '../data/network';
+import type { ActionType, WildType } from '../engine/cards';
+import type { RejectReason } from '../engine/game';
+
+export type Lang = 'en' | 'zh';
+export const LANGS: readonly Lang[] = ['en', 'zh'];
+const STORAGE_KEY = 'metro-uno.lang';
+
+/** `who` is the display name; `you` is true when it refers to the human player. */
+type Who = { who: string; you: boolean };
+
+export interface Dict {
+  title: string;
+  subtitle: string;
+  opponents: string;
+  language: string;
+  start: string;
+  you: string;
+  computer: (n: number) => string;
+  cards: (n: number) => string;
+  draw: string;
+  pass: string;
+  uno: string;
+  unoArmed: string;
+  drawPile: string;
+  currentLine: string;
+  direction: string;
+  clockwise: string;
+  anticlockwise: string;
+  yourTurn: string;
+  theirTurn: (who: string) => string;
+  drawnHint: string;
+  chooseLine: string;
+  cancel: string;
+  interchange: string;
+  transferTo: (station: string) => string;
+  playAgain: string;
+  backToSetup: string;
+  menu: string;
+  winner: (w: Who) => string;
+  houseRules: string;
+  defaultValue: (v: string) => string;
+  on: string;
+  off: string;
+  startingCards: string;
+  fewerCards: string;
+  moreCards: string;
+  drawUntilPlayable: string;
+  drawUntilPlayableHint: string;
+  playDrawnCard: string;
+  playDrawnCardHint: string;
+  playDrawnCardNA: string;
+  mixStacking: string;
+  mixStackingHint: string;
+  sameNumbers: string;
+  sameNumbersHint: string;
+  resetRules: string;
+  drawN: (n: number) => string;
+  pendingYou: (n: number) => string;
+  mustPlayHint: string;
+  sameNumberTitle: (n: number) => string;
+  sameNumberAdd: string;
+  endOn: string;
+  play: string;
+  actionName: Record<ActionType, string>;
+  wildName: Record<WildType, string>;
+  rejected: Record<RejectReason, string>;
+  ev: {
+    played: (w: Who, card: string) => string;
+    lineChanged: (line: string) => string;
+    unoCalled: (w: Who) => string;
+    drew: (w: Who, n: number) => string;
+    penalty: (w: Who, n: number) => string;
+    skipped: (w: Who) => string;
+    reversed: string;
+    reshuffled: string;
+    passed: (w: Who) => string;
+    drawPending: (w: Who, n: number) => string;
+  };
+}
+
+const en: Dict = {
+  title: 'Metro Uno',
+  subtitle: 'Hong Kong MTR',
+  opponents: 'Computer opponents',
+  language: 'Language',
+  start: 'Start',
+  you: 'You',
+  computer: (n) => `Computer ${n}`,
+  cards: (n) => (n === 1 ? '1 card' : `${n} cards`),
+  draw: 'Draw',
+  pass: 'Pass',
+  uno: 'UNO!',
+  unoArmed: 'UNO! called',
+  drawPile: 'Draw pile',
+  currentLine: 'Current line',
+  direction: 'Direction',
+  clockwise: 'Clockwise',
+  anticlockwise: 'Anticlockwise',
+  yourTurn: 'Your turn',
+  theirTurn: (who) => `${who}’s turn`,
+  drawnHint: 'You drew a playable card: play it or pass.',
+  chooseLine: 'Change to which line?',
+  cancel: 'Cancel',
+  interchange: 'Interchange',
+  transferTo: (station) => `Walkway transfer to ${station}`,
+  playAgain: 'Play again',
+  backToSetup: 'Back to setup',
+  menu: 'Setup',
+  winner: ({ who, you }) => (you ? 'You win!' : `${who} wins`),
+  houseRules: 'House rules',
+  defaultValue: (v) => `Default: ${v}`,
+  on: 'On',
+  off: 'Off',
+  startingCards: 'Starting cards',
+  fewerCards: 'Fewer starting cards',
+  moreCards: 'More starting cards',
+  drawUntilPlayable: 'Draw until you can play',
+  drawUntilPlayableHint: 'Off: draw 1 card. On: keep drawing until a card can be played, then play it.',
+  playDrawnCard: 'Play the card you drew',
+  playDrawnCardHint: 'When drawing 1 card, you may play it straight away if it matches.',
+  playDrawnCardNA: 'Not used when drawing until you can play.',
+  mixStacking: 'Stack +2 with +4',
+  mixStackingHint: 'Rush Hour (+2) and Typhoon No. 8 (+4) can be stacked on each other. Same-type stacking is always allowed.',
+  sameNumbers: 'Play same numbers together',
+  sameNumbersHint: 'Play several station cards with the same number in one turn.',
+  resetRules: 'Reset to defaults',
+  drawN: (n) => `Draw ${n}`,
+  pendingYou: (n) => `${n} cards coming your way: stack a +2/+4 or draw ${n}.`,
+  mustPlayHint: 'Play the card you drew.',
+  sameNumberTitle: (n) => `Play other ${n}s too?`,
+  sameNumberAdd: 'Add these cards',
+  endOn: 'Finish on (sets the line)',
+  play: 'Play',
+  actionName: { 'signal-fault': 'Signal Fault', terminus: 'Terminus', 'rush-hour': 'Rush Hour' },
+  wildName: { octopus: 'Octopus', typhoon: 'Typhoon Signal No. 8' },
+  rejected: {
+    'game-over': 'The round is over.',
+    'not-your-turn': 'Wait for your turn.',
+    'unknown-player': 'Unknown player.',
+    'card-not-in-hand': 'That card is not in your hand.',
+    'not-playable': 'That card doesn’t match the current line or number.',
+    'must-play-drawn-card-or-pass': 'Play the card you drew, or pass.',
+    'line-choice-required': 'Choose a line.',
+    'invalid-line': 'That line isn’t available for this card.',
+    'already-drew': 'You already drew this turn.',
+    'cannot-pass': 'Draw a card before passing.',
+    'must-play-drawn-card': 'You must play the card you drew.',
+    'cannot-play-together': 'Those cards can’t be played together.',
+  },
+  ev: {
+    played: ({ who }, card) => `${who} played ${card}`,
+    lineChanged: (line) => `Now on the ${line}`,
+    unoCalled: ({ who }) => `${who} called UNO!`,
+    drew: ({ who }, n) => `${who} drew ${n === 1 ? 'a card' : `${n} cards`}`,
+    penalty: ({ who, you }, n) => `${who} forgot to call UNO! ${you ? 'You draw' : 'Draws'} ${n} penalty card${n === 1 ? '' : 's'}`,
+    skipped: ({ who, you }) => (you ? 'You are skipped' : `${who} is skipped`),
+    reversed: 'Direction reversed',
+    reshuffled: 'Discard pile reshuffled into the draw pile',
+    passed: ({ who }) => `${who} passed`,
+    drawPending: ({ who, you }, n) => `${n} cards pending: ${you ? 'you must' : `${who} must`} stack or draw`,
+  },
+};
+
+const zh: Dict = {
+  title: '地鐵 UNO',
+  subtitle: '香港港鐵',
+  opponents: '電腦對手',
+  language: '語言',
+  start: '開始',
+  you: '你',
+  computer: (n) => `電腦 ${n}`,
+  cards: (n) => `${n} 張`,
+  draw: '抽牌',
+  pass: '過',
+  uno: 'UNO!',
+  unoArmed: '已叫 UNO!',
+  drawPile: '牌堆',
+  currentLine: '目前路綫',
+  direction: '方向',
+  clockwise: '順時針',
+  anticlockwise: '逆時針',
+  yourTurn: '輪到你',
+  theirTurn: (who) => `輪到${who}`,
+  drawnHint: '你抽到可以出的牌：出牌或過。',
+  chooseLine: '轉乘哪條路綫？',
+  cancel: '取消',
+  interchange: '轉車站',
+  transferTo: (station) => `經行人通道轉乘${station}`,
+  playAgain: '再玩一局',
+  backToSetup: '返回設定',
+  menu: '設定',
+  winner: ({ who, you }) => (you ? '你贏了！' : `${who}贏了`),
+  houseRules: '自訂規則',
+  defaultValue: (v) => `預設：${v}`,
+  on: '開',
+  off: '關',
+  startingCards: '起始手牌',
+  fewerCards: '減少起始手牌',
+  moreCards: '增加起始手牌',
+  drawUntilPlayable: '抽到可出的牌為止',
+  drawUntilPlayableHint: '關：只抽 1 張。開：一直抽到有可出的牌，然後必須出那張牌。',
+  playDrawnCard: '可以出剛抽到的牌',
+  playDrawnCardHint: '只抽 1 張時，如果那張牌相符，可以立即打出。',
+  playDrawnCardNA: '「抽到可出的牌為止」開啟時不適用。',
+  mixStacking: '+2 與 +4 可以疊加',
+  mixStackingHint: '繁忙時間（+2）和八號風球（+4）可以互相疊加。同類卡永遠可以疊加。',
+  sameNumbers: '同號碼可以一起出',
+  sameNumbersHint: '一回合內可以打出多張相同號碼的車站卡。',
+  resetRules: '回復預設',
+  drawN: (n) => `抽 ${n} 張`,
+  pendingYou: (n) => `有 ${n} 張牌要你抽：疊加 +2/+4，或抽 ${n} 張。`,
+  mustPlayHint: '必須出剛抽到的牌。',
+  sameNumberTitle: (n) => `一起出其他 ${n} 號？`,
+  sameNumberAdd: '加入這些牌',
+  endOn: '最後一張（決定路綫）',
+  play: '出牌',
+  actionName: { 'signal-fault': '訊號故障', terminus: '總站', 'rush-hour': '繁忙時間' },
+  wildName: { octopus: '八達通', typhoon: '八號風球' },
+  rejected: {
+    'game-over': '這局已經結束。',
+    'not-your-turn': '請等你的回合。',
+    'unknown-player': '未知玩家。',
+    'card-not-in-hand': '這張牌不在你手上。',
+    'not-playable': '這張牌與目前路綫或號碼不符。',
+    'must-play-drawn-card-or-pass': '出剛抽到的牌，或選擇過。',
+    'line-choice-required': '請選擇路綫。',
+    'invalid-line': '這張牌不能轉到該路綫。',
+    'already-drew': '你這回合已經抽過牌。',
+    'cannot-pass': '要先抽牌才可以過。',
+    'must-play-drawn-card': '你必須出剛抽到的牌。',
+    'cannot-play-together': '這些牌不能一起出。',
+  },
+  ev: {
+    played: ({ who }, card) => `${who}出了${card}`,
+    lineChanged: (line) => `現在是${line}`,
+    unoCalled: ({ who }) => `${who}叫了 UNO！`,
+    drew: ({ who }, n) => `${who}抽了 ${n} 張牌`,
+    penalty: ({ who }, n) => `${who}忘記叫 UNO！罰抽 ${n} 張`,
+    skipped: ({ who }) => `${who}被跳過`,
+    reversed: '方向反轉',
+    reshuffled: '棄牌已洗回牌堆',
+    passed: ({ who }) => `${who}選擇過`,
+    drawPending: ({ who }, n) => `${who}要疊加或抽 ${n} 張`,
+  },
+};
+
+export const dictionaries: Record<Lang, Dict> = { en, zh };
+
+export function localName(name: LocalizedName, lang: Lang): string {
+  return name[lang];
+}
+
+/** Reads the saved language; any storage failure falls back to English. */
+export function loadLang(storage: () => Storage | undefined = () => globalThis.localStorage): Lang {
+  try {
+    const v = storage()?.getItem(STORAGE_KEY);
+    return v === 'zh' || v === 'en' ? v : 'en';
+  } catch {
+    return 'en';
+  }
+}
+
+/** Saves the language; storage failures are ignored. */
+export function saveLang(lang: Lang, storage: () => Storage | undefined = () => globalThis.localStorage): void {
+  try {
+    storage()?.setItem(STORAGE_KEY, lang);
+  } catch {
+    /* storage unavailable: the choice just isn't remembered */
+  }
+}
