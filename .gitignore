@@ -1,5 +1,30 @@
+# Dependencies
 node_modules
+
+# Build output
 dist
+*.tsbuildinfo
+
+# Test output
 test-results
 playwright-report
-*.tsbuildinfo
+blob-report
+coverage
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local environment
+.env
+.env.*
+!.env.example
