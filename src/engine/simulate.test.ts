@@ -10,6 +10,7 @@ const ruleSets: [string, Partial<HouseRules>, number][] = [
   ['all on', { drawUntilPlayable: true, playDrawnCard: true, mixDrawStacking: true, playSameNumbers: true, handSize: 10 }, 1000],
   ['all off', { drawUntilPlayable: false, playDrawnCard: false, mixDrawStacking: false, playSameNumbers: false, handSize: 3 }, 10],
   ['play drawn card', { playDrawnCard: true }, 10],
+  ['first out ends the round', { playUntilLast: false }, 10],
 ];
 
 describe.each(ruleSets)('AI-only simulation (%s)', (_name, rules, maxLimitHits) => {
@@ -27,6 +28,14 @@ describe.each(ruleSets)('AI-only simulation (%s)', (_name, rules, maxLimitHits) 
       const total =
         r.state.drawPile.length + r.state.discard.length + r.state.players.reduce((n, p) => n + p.hand.length, 0);
       expect(total).toBe(130);
+      if (r.state.phase === 'ended') {
+        // Everyone who went out has no cards; with "play until one is left" only one player still has cards.
+        for (const id of r.state.finished) expect(r.state.players.find((p) => p.id === id)!.hand).toHaveLength(0);
+        expect(r.state.winner).toBe(r.state.finished[0]);
+        const left = r.state.players.filter((p) => p.hand.length > 0).length;
+        if (r.state.rules.playUntilLast) expect(left).toBe(1);
+        else expect(r.state.finished).toHaveLength(1);
+      }
     }
     expect(rejections).toBe(0);
     // Spec: every round ends with a winner or reaches the safety turn limit.

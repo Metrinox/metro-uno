@@ -446,6 +446,10 @@ legend {
 .log li.is-rejected {
   color: var(--danger);
 }
+.finished-note {
+  font-weight: 600;
+  color: var(--accent);
+}
 
 .controls {
   display: flex;
@@ -666,6 +670,15 @@ button.card {
   background: var(--surface);
   padding: 6px 10px;
   cursor: pointer;
+}
+.standings {
+  margin: 0;
+  padding-left: 1.6em;
+  display: grid;
+  gap: 4px;
+}
+.standings li.is-me {
+  font-weight: 700;
 }
 .dialog-actions {
   display: flex;

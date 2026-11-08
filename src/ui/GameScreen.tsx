@@ -49,6 +49,8 @@ function describe(item: LogItem, t: Dict, lang: Lang): string | null {
       return t.ev.passed(who(item.player));
     case 'drawPending':
       return t.ev.drawPending(who(item.player), item.count);
+    case 'finished':
+      return t.ev.finished(who(item.player), item.place);
     case 'rejected':
       return t.rejected[item.reason];
     case 'won':
@@ -132,7 +134,15 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
     .filter((m) => m.text !== null)
     .slice(-3);
   const turnText = myTurn ? t.yourTurn : t.theirTurn(displayName(state.players[state.turn]!.id, t));
-  const winner = state.winner;
+  const ended = state.phase === 'ended';
+  const winner = ended ? state.winner : null;
+  const placeOf = (id: string) => state.finished.indexOf(id) + 1;
+  const myPlace = placeOf(HUMAN_ID);
+  // Finishing order, then anyone still holding cards (the last place).
+  const standings = [
+    ...state.finished,
+    ...state.players.filter((p) => !state.finished.includes(p.id)).map((p) => p.id),
+  ];
 
   return (
     <div className="game">
@@ -154,7 +164,7 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
               <li key={p.id} className={active ? 'opponent is-active' : 'opponent'} data-testid={`opponent-${p.id}`} aria-current={active ? 'true' : undefined}>
                 <span className="opponent-name">{displayName(p.id, t)}</span>
                 <span className="opponent-count" data-testid={`count-${p.id}`}>
-                  {t.cards(p.hand.length)}
+                  {placeOf(p.id) > 0 ? t.place(placeOf(p.id)) : t.cards(p.hand.length)}
                 </span>
               </li>
             );
@@ -188,6 +198,11 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
       <LineStrip line={state.currentLine} highlightStation={highlightStation} />
 
       <section className="status">
+        {myPlace > 0 && !ended && (
+          <p className="finished-note" role="status" data-testid="you-finished">
+            {t.youFinished(myPlace)}
+          </p>
+        )}
         <p className={myTurn ? 'turn is-mine' : 'turn'} data-testid="turn">
           {turnText}
           {myTurn && state.drawnCardId !== null && (
@@ -277,6 +292,15 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
         <div className="overlay">
           <div className="dialog" role="dialog" aria-modal="true" aria-labelledby="winner-title" data-testid="end-screen">
             <h2 id="winner-title">{t.winner({ who: displayName(winner, t), you: winner === HUMAN_ID })}</h2>
+            {state.finished.length > 1 && (
+              <ol className="standings" aria-label={t.standings} data-testid="standings">
+                {standings.map((id) => (
+                  <li key={id} className={id === HUMAN_ID ? 'is-me' : undefined}>
+                    {displayName(id, t)}
+                  </li>
+                ))}
+              </ol>
+            )}
             <div className="dialog-actions">
               <button type="button" className="btn btn-primary" onClick={onPlayAgain} autoFocus>
                 {t.playAgain}

@@ -14,7 +14,7 @@ interface Props {
   onStart: (opponents: number) => void;
 }
 
-type ToggleKey = 'drawUntilPlayable' | 'playDrawnCard' | 'mixDrawStacking' | 'playSameNumbers';
+type ToggleKey = 'drawUntilPlayable' | 'playDrawnCard' | 'mixDrawStacking' | 'playSameNumbers' | 'playUntilLast';
 
 export function Setup({ initialOpponents, rules, onRulesChange, onStart }: Props) {
   const { lang, t, setLang } = useLang();
@@ -33,6 +33,7 @@ export function Setup({ initialOpponents, rules, onRulesChange, onStart }: Props
     },
     { key: 'mixDrawStacking', label: t.mixStacking, hint: t.mixStackingHint },
     { key: 'playSameNumbers', label: t.sameNumbers, hint: t.sameNumbersHint },
+    { key: 'playUntilLast', label: t.playUntilLast, hint: t.playUntilLastHint },
   ];
 
   return (

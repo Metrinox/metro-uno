@@ -87,8 +87,12 @@ export function chooseAction(view: PlayerView): Action {
 
   if (legal.length === 0) return { type: 'draw' };
 
-  const n = view.players.length;
-  const nextIdx = (((view.myIndex + view.direction) % n) + n) % n;
+  // Players who have gone out are skipped.
+  const total = view.players.length;
+  let nextIdx = view.myIndex;
+  do nextIdx = (((nextIdx + view.direction) % total) + total) % total;
+  while (view.finished.includes(view.players[nextIdx]!.id) && nextIdx !== view.myIndex);
+  const n = total - view.finished.length;
   if (view.players[nextIdx]!.cardCount <= 2) {
     const blockers = legal
       .map((c) => ({ c, score: blocksNext(c, n) }))

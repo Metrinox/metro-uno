@@ -29,6 +29,8 @@ export interface HouseRules {
   mixDrawStacking: boolean;
   /** Whether several station cards with the same number may be played together. */
   playSameNumbers: boolean;
+  /** Keep playing after someone goes out, until only one player still has cards. */
+  playUntilLast: boolean;
 }
 
 export const DEFAULT_RULES: Readonly<HouseRules> = {
@@ -37,6 +39,7 @@ export const DEFAULT_RULES: Readonly<HouseRules> = {
   playDrawnCard: false,
   mixDrawStacking: true,
   playSameNumbers: true,
+  playUntilLast: true,
 };
 
 /** Fills in defaults and clamps the hand size into range. */
@@ -49,6 +52,7 @@ export function normalizeRules(partial: Partial<HouseRules> = {}): HouseRules {
     playDrawnCard: !!r.playDrawnCard,
     mixDrawStacking: !!r.mixDrawStacking,
     playSameNumbers: !!r.playSameNumbers,
+    playUntilLast: !!r.playUntilLast,
   };
 }
 
@@ -88,7 +92,10 @@ export interface GameState {
   direction: 1 | -1;
   rng: RngState;
   phase: 'playing' | 'ended';
+  /** The first player to go out. */
   winner: string | null;
+  /** Players who have gone out, in finishing order. Their turns are skipped. */
+  finished: string[];
   /** Draw owed by the current player, if a draw card was played on them. */
   pendingDraw: PendingDraw | null;
   /** Set after the current player draws a playable card they may (or must) play. */
@@ -117,6 +124,7 @@ export type GameEvent =
   | { type: 'reversed'; direction: 1 | -1 }
   | { type: 'reshuffled'; count: number }
   | { type: 'passed'; player: string }
+  | { type: 'finished'; player: string; place: number }
   | { type: 'won'; player: string }
   | { type: 'turn'; player: string };
 
@@ -261,6 +269,7 @@ export function createGame({ network, players, seed, rules: partialRules }: NewG
     rng,
     phase: 'playing',
     winner: null,
+    finished: [],
     pendingDraw: null,
     drawnCardId: null,
     mustPlayDrawn: false,
@@ -363,7 +372,7 @@ function play(state: GameState, idx: number, action: Extract<Action, { type: 'pl
   if (me.hand.length === 1 && action.callUno) events.push({ type: 'unoCalled', player: me.id });
 
   // Effects on the next player.
-  const n = s.players.length;
+  const n = activeCount(s);
   let advance = 1;
   const drawType = drawCardType(last);
   if (drawType) {
@@ -383,12 +392,17 @@ function play(state: GameState, idx: number, action: Extract<Action, { type: 'pl
   }
 
   if (me.hand.length === 0) {
-    // The last card's effect still lands before the round ends.
-    if (s.pendingDraw) takePendingDraw(s, nextIndex(s, idx, 1), events);
-    s.phase = 'ended';
-    s.winner = me.id;
-    events.push({ type: 'won', player: me.id });
-    return { ok: true, state: s, events };
+    s.finished.push(me.id);
+    s.winner ??= me.id;
+    if (!s.rules.playUntilLast || activeCount(s) <= 1) {
+      // The last card's effect still lands before the round ends.
+      if (s.pendingDraw) takePendingDraw(s, nextIndex(s, idx, 1), events);
+      s.phase = 'ended';
+      events.push({ type: 'won', player: s.winner });
+      return { ok: true, state: s, events };
+    }
+    // Play goes on without this player; the card's effect lands as usual.
+    events.push({ type: 'finished', player: me.id, place: s.finished.length });
   }
 
   if (missedUno) {
@@ -469,13 +483,25 @@ function cloneState(state: GameState): GameState {
     drawPile: state.drawPile.slice(),
     discard: state.discard.slice(),
     face: { ...state.face },
+    finished: state.finished.slice(),
     pendingDraw: state.pendingDraw && { ...state.pendingDraw },
   };
 }
 
+/** Number of players who have not gone out yet. */
+function activeCount(s: GameState): number {
+  return s.players.length - s.finished.length;
+}
+
+/** Index `steps` players on from `from` in the current direction, skipping players who have gone out. */
 function nextIndex(s: GameState, from: number, steps: number): number {
   const n = s.players.length;
-  return (((from + s.direction * steps) % n) + n) % n;
+  let i = from;
+  for (let k = 0; k < steps; k++) {
+    do i = (((i + s.direction) % n) + n) % n;
+    while (s.finished.includes(s.players[i]!.id) && i !== from);
+  }
+  return i;
 }
 
 function startTurn(s: GameState, idx: number, events: GameEvent[]) {
@@ -549,6 +575,7 @@ export interface PlayerView extends PlayContext {
   discardCount: number;
   phase: GameState['phase'];
   winner: string | null;
+  finished: string[];
   /** The card the viewer just drew and may play (only set on the viewer's own turn). */
   drawnCardId: string | null;
   mustPlayDrawn: boolean;
@@ -575,6 +602,7 @@ export function viewFor(state: GameState, playerId: string): PlayerView {
     discardCount: state.discard.length,
     phase: state.phase,
     winner: state.winner,
+    finished: [...state.finished],
     drawnCardId: myTurn ? state.drawnCardId : null,
     mustPlayDrawn: myTurn && state.mustPlayDrawn,
   };

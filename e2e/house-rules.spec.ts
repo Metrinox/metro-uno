@@ -9,6 +9,7 @@ test.describe('house rules', () => {
     await expect(page.getByTestId('rule-playDrawnCard')).not.toBeChecked();
     await expect(page.getByTestId('rule-mixDrawStacking')).toBeChecked();
     await expect(page.getByTestId('rule-playSameNumbers')).toBeChecked();
+    await expect(page.getByTestId('rule-playUntilLast')).toBeChecked();
   });
 
   test('starting cards changes the deal and is remembered', async ({ page }) => {

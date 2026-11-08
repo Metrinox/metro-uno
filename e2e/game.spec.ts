@@ -243,7 +243,7 @@ test.describe('controls', () => {
 
 test.describe('end of round', () => {
   test('announces the winner; Play Again keeps opponents and reshuffles', async ({ page }) => {
-    await startGame(page, { opponents: 3, aiDelay: 60_000 });
+    await startGame(page, { opponents: 3, aiDelay: 60_000, rules: { playUntilLast: false } });
     const before = await page.evaluate(() => window.__metroTest!.getState().players[1]!.hand.map((c) => c.id));
     await arrange(page, { hands: { p0: ['st:tai-koo'] }, top: 'st:sai-ying-pun' });
     await page.getByTestId('hand').locator('[data-card="st:tai-koo"]').click();
@@ -255,8 +255,23 @@ test.describe('end of round', () => {
     expect(after).not.toEqual(before);
   });
 
+  test('by default play goes on after you go out, until one player is left', async ({ page }) => {
+    await startGame(page, { opponents: 2, aiDelay: 1500 });
+    await arrange(page, {
+      hands: { p0: ['st:tai-koo'], ai1: ['st:chai-wan'], ai2: ['st:jordan', 'st:whampoa'] },
+      top: 'st:sai-ying-pun',
+    });
+    await page.getByTestId('hand').locator('[data-card="st:tai-koo"]').click();
+    await expect(page.getByTestId('you-finished')).toHaveText('You finished 1st. The others play on.');
+    await expect(page.getByTestId('end-screen')).toHaveCount(0);
+    // Computer 1 plays its last card; only Computer 2 is left, so the round ends.
+    const end = page.getByTestId('end-screen');
+    await expect(end).toContainText('You win!');
+    await expect(end.getByTestId('standings').locator('li')).toHaveText(['You', 'Computer 1', 'Computer 2']);
+  });
+
   test('Back to setup returns to the setup screen', async ({ page }) => {
-    await startGame(page, { aiDelay: 60_000 });
+    await startGame(page, { aiDelay: 60_000, rules: { playUntilLast: false } });
     await arrange(page, { hands: { p0: ['st:tai-koo'] }, top: 'st:sai-ying-pun' });
     await page.getByTestId('hand').locator('[data-card="st:tai-koo"]').click();
     await page.getByRole('button', { name: 'Back to setup' }).click();

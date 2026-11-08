@@ -67,6 +67,12 @@ export interface Dict {
   mixStackingHint: string;
   sameNumbers: string;
   sameNumbersHint: string;
+  playUntilLast: string;
+  playUntilLastHint: string;
+  /** Finishing place, e.g. "2nd". */
+  place: (n: number) => string;
+  standings: string;
+  youFinished: (place: number) => string;
   resetRules: string;
   drawN: (n: number) => string;
   pendingYou: (n: number) => string;
@@ -89,7 +95,14 @@ export interface Dict {
     reshuffled: string;
     passed: (w: Who) => string;
     drawPending: (w: Who, n: number) => string;
+    finished: (w: Who, place: number) => string;
   };
+}
+
+function ordinal(n: number): string {
+  const tens = n % 100;
+  const suffix = tens >= 11 && tens <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
+  return `${n}${suffix}`;
 }
 
 const en: Dict = {
@@ -150,6 +163,11 @@ const en: Dict = {
   mixStackingHint: 'Rush Hour (+2) and Typhoon No. 8 (+4) can be stacked on each other. Same-type stacking is always allowed.',
   sameNumbers: 'Play same numbers together',
   sameNumbersHint: 'Play several station cards with the same number in one turn.',
+  playUntilLast: 'Play until one player is left',
+  playUntilLastHint: 'When someone goes out, the others keep playing for places. Off: the first player out ends the round.',
+  place: ordinal,
+  standings: 'Standings',
+  youFinished: (place) => `You finished ${ordinal(place)}. The others play on.`,
   resetRules: 'Reset to defaults',
   drawN: (n) => `Draw ${n}`,
   pendingYou: (n) => `${n} cards coming your way: stack a +2/+4 or draw ${n}.`,
@@ -185,6 +203,7 @@ const en: Dict = {
     reshuffled: 'Discard pile reshuffled into the draw pile',
     passed: ({ who }) => `${who} passed`,
     drawPending: ({ who, you }, n) => `${n} cards pending: ${you ? 'you must' : `${who} must`} stack or draw`,
+    finished: ({ who }, place) => `${who} went out in ${ordinal(place)} place`,
   },
 };
 
@@ -246,6 +265,11 @@ const zh: Dict = {
   mixStackingHint: '繁忙時間（+2）和八號風球（+4）可以互相疊加。同類卡永遠可以疊加。',
   sameNumbers: '同號碼可以一起出',
   sameNumbersHint: '一回合內可以打出多張相同號碼的車站卡。',
+  playUntilLast: '打到剩低一個玩家',
+  playUntilLastHint: '有人出完牌後，其他玩家繼續爭名次。關閉：第一個出完牌就結束。',
+  place: (n) => `第 ${n} 名`,
+  standings: '名次',
+  youFinished: (place) => `你得到第 ${place} 名，其他玩家繼續。`,
   resetRules: '回復預設',
   drawN: (n) => `抽 ${n} 張`,
   pendingYou: (n) => `有 ${n} 張牌要你抽：疊加 +2/+4，或抽 ${n} 張。`,
@@ -281,6 +305,7 @@ const zh: Dict = {
     reshuffled: '棄牌已洗回牌堆',
     passed: ({ who }) => `${who}選擇過`,
     drawPending: ({ who }, n) => `${who}要疊加或抽 ${n} 張`,
+    finished: ({ who }, place) => `${who}出完牌，得到第 ${place} 名`,
   },
 };
 

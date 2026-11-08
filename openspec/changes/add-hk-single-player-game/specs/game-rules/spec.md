@@ -208,9 +208,15 @@ A player who plays their second-to-last card SHALL call "UNO!" as part of that p
 - **THEN** they draw 1 penalty card at the end of that turn
 
 ### Requirement: Winning
-The first player to have no cards left SHALL win, and the round SHALL end at once. Any effect of the final card on other players, including a pending draw, SHALL still be applied before the round ends.
+The first player to have no cards left SHALL win. With the "play until one player is left" house rule on (the default), a player who runs out of cards SHALL go out and take the next finishing place; their turns SHALL be skipped, any effect of their final card SHALL apply to the next remaining player, and the round SHALL end when only one player still has cards. With the rule off, the round SHALL end as soon as the first player runs out; any effect of the final card on other players, including a pending draw, SHALL still be applied before the round ends.
 
-#### Scenario: Win on last card
+#### Scenario: Play goes on after the first player goes out
+- **GIVEN** 3 players and "play until one player is left" is on
+- **WHEN** a player plays their last card
+- **THEN** that player is the winner, the round continues without them, and it ends when a second player runs out, showing the finishing order
+
+#### Scenario: Win on last card ends the round
+- **GIVEN** "play until one player is left" is off
 - **WHEN** a player plays their last card
 - **THEN** the round ends and that player is the winner
 

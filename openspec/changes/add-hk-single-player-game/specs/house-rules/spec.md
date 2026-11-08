@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Lets the player change optional rules before a round: starting hand size, how drawing works, mixing +2 and +4 when stacking, and playing several cards of the same number.
+Lets the player change optional rules before a round: starting hand size, how drawing works, mixing +2 and +4 when stacking, playing several cards of the same number, and whether play continues until one player is left.
 
 ## ADDED Requirements
 
@@ -13,10 +13,11 @@ The game SHALL offer these house rules, with these defaults:
 - Play the drawn card: off
 - Mix +2 and +4 when stacking: on
 - Play same numbers together: on
+- Play until one player is left: on
 
 #### Scenario: Defaults
 - **WHEN** the player has never changed the house rules
-- **THEN** a round starts with 7 cards each, draw one card, no playing the drawn card, mixing allowed, and same numbers allowed together
+- **THEN** a round starts with 7 cards each, draw one card, no playing the drawn card, mixing allowed, same numbers allowed together, and play continuing until one player is left
 
 ### Requirement: Play the drawn card only applies when drawing one
 "Play the drawn card" SHALL only apply when "draw until playable" is off. When "draw until playable" is on, the card found SHALL always be played.

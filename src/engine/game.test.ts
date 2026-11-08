@@ -340,7 +340,7 @@ describe('UNO call', () => {
 
 describe('winning', () => {
   it('ends the round when a player plays their last card', () => {
-    const s = scenario({ hands: [['st:tai-koo'], filler], top: 'st:sai-ying-pun' });
+    const s = scenario({ hands: [['st:tai-koo'], filler], top: 'st:sai-ying-pun', rules: { playUntilLast: false } });
     const r = ok(s, 'p0', { type: 'play', cardId: 'st:tai-koo' });
     expect(r.state.phase).toBe('ended');
     expect(r.state.winner).toBe('p0');
@@ -352,6 +352,67 @@ describe('winning', () => {
     const r = ok(s, 'p0', { type: 'play', cardId: 'act:rush-hour:ISL' });
     expect(r.state.players[1]!.hand).toHaveLength(5);
     expect(r.state.winner).toBe('p0');
+  });
+
+  it('with "first out ends the round", ends at once even with 3 players', () => {
+    const s = scenario({ hands: [['st:tai-koo'], filler, filler.map((x) => x)], top: 'st:sai-ying-pun', rules: { playUntilLast: false } });
+    const r = ok(s, 'p0', { type: 'play', cardId: 'st:tai-koo' });
+    expect(r.state.phase).toBe('ended');
+    expect(r.state.finished).toEqual(['p0']);
+  });
+});
+
+describe('play until one player is left (default)', () => {
+  const three = (hand0: string[], extra: Parameters<typeof scenario>[0] = { hands: [] }) =>
+    scenario({
+      top: 'st:sai-ying-pun',
+      drawPile: ['st:lok-fu', 'st:lam-tin', 'st:hku', 'st:kennedy-town'],
+      ...extra,
+      hands: [hand0, ['st:jordan', 'st:whampoa'], ['st:olympic', 'st:tai-koo']],
+    });
+
+  it('keeps playing after the first player goes out, skipping them', () => {
+    const r = ok(three(['st:chai-wan']), 'p0', { type: 'play', cardId: 'st:chai-wan' });
+    expect(r.state.phase).toBe('playing');
+    expect(r.state.winner).toBe('p0');
+    expect(r.state.finished).toEqual(['p0']);
+    expect(r.events).toContainEqual({ type: 'finished', player: 'p0', place: 1 });
+    expect(r.state.turn).toBe(1);
+    // p1 draws; p2 is next, then p1 again — p0 is skipped.
+    const r2 = ok(r.state, 'p1', { type: 'draw' });
+    expect(r2.state.turn).toBe(2);
+    const r3 = ok(r2.state, 'p2', { type: 'draw' });
+    expect(r3.state.turn).toBe(1);
+    expect(applyAction(r3.state, 'p0', { type: 'draw' })).toEqual({ ok: false, reason: 'not-your-turn' });
+  });
+
+  it('ends when only one player still has cards', () => {
+    let s = three(['st:chai-wan']);
+    s = ok(s, 'p0', { type: 'play', cardId: 'st:chai-wan' }).state;
+    s = { ...s, players: s.players.map((p) => (p.id === 'p1' ? { ...p, hand: [card('st:tai-koo')] } : p)) };
+    const r = ok(s, 'p1', { type: 'play', cardId: 'st:tai-koo' });
+    expect(r.state.phase).toBe('ended');
+    expect(r.state.winner).toBe('p0');
+    expect(r.state.finished).toEqual(['p0', 'p1']);
+    expect(r.events).toContainEqual({ type: 'won', player: 'p0' });
+  });
+
+  it('a final Signal Fault skips over the next remaining player', () => {
+    const r = ok(three(['act:signal-fault:ISL']), 'p0', { type: 'play', cardId: 'act:signal-fault:ISL' });
+    expect(r.state.turn).toBe(2);
+  });
+
+  it('a final Rush Hour leaves the draw pending on the next remaining player', () => {
+    const r = ok(three(['act:rush-hour:ISL']), 'p0', { type: 'play', cardId: 'act:rush-hour:ISL' });
+    // p1 has nothing to stack, so takes 2 and is skipped.
+    expect(r.state.players[1]!.hand).toHaveLength(4);
+    expect(r.state.turn).toBe(2);
+  });
+
+  it('a final Terminus with two players left acts as a skip', () => {
+    const r = ok(three(['act:terminus:ISL']), 'p0', { type: 'play', cardId: 'act:terminus:ISL' });
+    expect(r.state.direction).toBe(-1);
+    expect(r.state.turn).toBe(2);
   });
 });
 
@@ -400,6 +461,7 @@ describe('house rules', () => {
       playDrawnCard: false,
       mixDrawStacking: true,
       playSameNumbers: true,
+      playUntilLast: true,
     });
   });
 });

@@ -50,6 +50,7 @@ export function scenario(o: ScenarioOptions): GameState {
     rng: 12345,
     phase: 'playing',
     winner: null,
+    finished: [],
     pendingDraw: o.pendingDraw ?? null,
     drawnCardId: null,
     mustPlayDrawn: false,
