@@ -47,6 +47,7 @@
 - [x] 6.7 Add the line choice dialog for interchange and wild cards, Draw and Pass controls, the UNO control, and the penalty message. Verify the game-ui scenarios for each control with Playwright
 - [x] 6.8 Add the end-of-round screen with Play Again and Back to Setup, and verify that Play Again keeps the opponent count and reshuffles
 - [x] 6.9 Add keyboard and focus support and no horizontal scroll at 360px. Verify with a Playwright check at 360px and by tabbing through the controls
+- [x] 6.10 Add the `/gallery` page (all lines with diagrams, all cards grouped) as a separate page. Verify with Playwright that it shows 8 lines and 130 unique cards and switches language, and that the production build serves it
 
 ## 8. House rules
 

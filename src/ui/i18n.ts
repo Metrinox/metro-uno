@@ -39,6 +39,14 @@ export interface Dict {
   menu: string;
   winner: (w: Who) => string;
   houseRules: string;
+  galleryTitle: string;
+  galleryIntro: (cards: number, lines: number) => string;
+  linesHeading: string;
+  stationCount: (n: number) => string;
+  cardsHeading: string;
+  interchangesGroup: string;
+  wildsGroup: string;
+  backToGame: string;
   defaultValue: (v: string) => string;
   on: string;
   off: string;
@@ -109,6 +117,14 @@ const en: Dict = {
   menu: 'Setup',
   winner: ({ who, you }) => (you ? 'You win!' : `${who} wins`),
   houseRules: 'House rules',
+  galleryTitle: 'Card & line gallery',
+  galleryIntro: (cards, lines) => `All ${cards} cards in the deck and all ${lines} lines.`,
+  linesHeading: 'Lines',
+  stationCount: (n) => `${n} stations`,
+  cardsHeading: 'Cards',
+  interchangesGroup: 'Interchanges',
+  wildsGroup: 'Wild cards',
+  backToGame: '← Back to the game',
   defaultValue: (v) => `Default: ${v}`,
   on: 'On',
   off: 'Off',
@@ -192,6 +208,14 @@ const zh: Dict = {
   menu: '設定',
   winner: ({ who, you }) => (you ? '你贏了！' : `${who}贏了`),
   houseRules: '自訂規則',
+  galleryTitle: '卡牌及路綫一覽',
+  galleryIntro: (cards, lines) => `牌堆全部 ${cards} 張牌及全部 ${lines} 條路綫。`,
+  linesHeading: '路綫',
+  stationCount: (n) => `${n} 個站`,
+  cardsHeading: '卡牌',
+  interchangesGroup: '轉車站',
+  wildsGroup: '萬用牌',
+  backToGame: '← 返回遊戲',
   defaultValue: (v) => `預設：${v}`,
   on: '開',
   off: '關',

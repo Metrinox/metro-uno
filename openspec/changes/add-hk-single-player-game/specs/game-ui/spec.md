@@ -124,6 +124,17 @@ When the round ends, the screen SHALL announce the winner and offer to play agai
 - **WHEN** the round has ended and the player chooses Play Again
 - **THEN** a new round starts with the same number of opponents and a new shuffle
 
+### Requirement: Asset gallery page
+The site SHALL have a page at `/gallery` that shows every line and every card in the deck, for reviewing the artwork. For each line it SHALL show the line's labels, name, and line diagram. It SHALL show every card once, grouped by line, with interchanges and wild cards in their own groups. The language switch SHALL work on this page, and the page SHALL link back to the game.
+
+#### Scenario: Everything shown
+- **WHEN** the `/gallery` page is opened
+- **THEN** it shows all 8 lines with their diagrams and all 130 cards, each card exactly once
+
+#### Scenario: Gallery in Chinese
+- **WHEN** the language is switched to Traditional Chinese on the `/gallery` page
+- **THEN** line and station names appear in Chinese
+
 ### Requirement: Language switch
 The interface SHALL support English and Traditional Chinese. It SHALL be possible to switch language at any time without restarting. The choice SHALL be remembered on that device where browser storage is available.
 

@@ -64,6 +64,8 @@ npm run preview                  # serve the production build locally
 
 `dist/` is a static site with no backend. Upload it to any static host.
 
+**Card gallery:** open `/gallery/` (e.g. http://localhost:5173/gallery/) to see every line diagram and all 130 cards, in either language. It's a separate page (`gallery/index.html`), so it works on any static host.
+
 URL options for testing: `?seed=abc` fixes the shuffle, and `?aiDelay=0` removes the computer's pause (the default is 2 s).
 
 ### Project layout
@@ -73,6 +75,7 @@ src/
   data/     Network format, loader/validator, and city data (hk-mtr.ts)
   engine/   Rules (game.ts), deck (cards.ts), AI (ai.ts), seeded RNG, simulation
   ui/       React app: screens, cards, line strip, i18n
+gallery/    The /gallery card gallery page (entry HTML)
 e2e/        Playwright browser tests
 openspec/   Specs and change history
 ```
