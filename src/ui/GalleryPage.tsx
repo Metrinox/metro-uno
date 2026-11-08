@@ -3,6 +3,7 @@ import { buildDeck, type Card } from '../engine/cards';
 import { CardView } from './CardView';
 import { lineName } from './format';
 import { LangToggle } from './LangToggle';
+import { ThemeToggle } from './ThemeToggle';
 import { useLang } from './LangContext';
 import { LineBadge } from './LineBadge';
 import { LineStrip } from './LineStrip';
@@ -42,7 +43,10 @@ export function GalleryPage() {
           <h1>{t.galleryTitle}</h1>
           <p className="subtitle">{t.galleryIntro(deck.length, network.lines.length)}</p>
         </div>
-        <LangToggle />
+        <div className="gallery-header-controls">
+          <ThemeToggle />
+          <LangToggle />
+        </div>
       </header>
       <a className="gallery-back" href="../">
         {t.backToGame}

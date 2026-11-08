@@ -14,6 +14,11 @@ export interface Dict {
   subtitle: string;
   opponents: string;
   language: string;
+  theme: string;
+  light: string;
+  dark: string;
+  switchToLight: string;
+  switchToDark: string;
   start: string;
   you: string;
   computer: (n: number) => string;
@@ -92,6 +97,11 @@ const en: Dict = {
   subtitle: 'Hong Kong MTR',
   opponents: 'Computer opponents',
   language: 'Language',
+  theme: 'Appearance',
+  light: 'Light',
+  dark: 'Dark',
+  switchToLight: 'Switch to light mode',
+  switchToDark: 'Switch to dark mode',
   start: 'Start',
   you: 'You',
   computer: (n) => `Computer ${n}`,
@@ -183,6 +193,11 @@ const zh: Dict = {
   subtitle: '香港港鐵',
   opponents: '電腦對手',
   language: '語言',
+  theme: '外觀',
+  light: '淺色',
+  dark: '深色',
+  switchToLight: '切換至淺色模式',
+  switchToDark: '切換至深色模式',
   start: '開始',
   you: '你',
   computer: (n) => `電腦 ${n}`,

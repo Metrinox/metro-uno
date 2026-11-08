@@ -5,6 +5,7 @@ import { CardView } from './CardView';
 import { cardName, handOrder, lineName } from './format';
 import type { Dict, Lang } from './i18n';
 import { LangToggle } from './LangToggle';
+import { ThemeToggle } from './ThemeToggle';
 import { LineBadge } from './LineBadge';
 import { LineChooser } from './LineChooser';
 import { LineStrip } from './LineStrip';
@@ -137,6 +138,7 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
     <div className="game">
       <header className="topbar">
         <h1 className="brand">{t.title}</h1>
+        <ThemeToggle />
         <LangToggle />
         <button type="button" className="btn btn-quiet" onClick={onSetup}>
           {t.menu}

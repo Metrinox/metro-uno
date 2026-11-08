@@ -3,8 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#1b1f24" />
+    <meta name="theme-color" content="#f3f1ec" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#15181c" media="(prefers-color-scheme: dark)" />
     <title>Metro Uno</title>
+    <script>
+      try {
+        var t = localStorage.getItem('metro-uno.theme');
+        if (t === 'light' || t === 'dark') {
+          document.documentElement.dataset.theme = t;
+          document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) {
+            m.content = t === 'dark' ? '#15181c' : '#f3f1ec';
+          });
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

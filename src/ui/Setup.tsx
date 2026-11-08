@@ -3,6 +3,7 @@ import { DEFAULT_RULES, HAND_SIZE_MAX, HAND_SIZE_MIN, type HouseRules } from '..
 import { LANGS } from './i18n';
 import { useLang } from './LangContext';
 import { network } from './network';
+import { THEMES, useTheme } from './theme';
 
 const LANG_NAME = { en: 'English', zh: '繁體中文' } as const;
 
@@ -17,6 +18,7 @@ type ToggleKey = 'drawUntilPlayable' | 'playDrawnCard' | 'mixDrawStacking' | 'pl
 
 export function Setup({ initialOpponents, rules, onRulesChange, onStart }: Props) {
   const { lang, t, setLang } = useLang();
+  const { theme, setTheme } = useTheme();
   const [opponents, setOpponents] = useState(initialOpponents);
   const set = (patch: Partial<HouseRules>) => onRulesChange({ ...rules, ...patch });
   const onOff = (v: boolean) => (v ? t.on : t.off);
@@ -63,6 +65,18 @@ export function Setup({ initialOpponents, rules, onRulesChange, onStart }: Props
               <label key={l} className={l === lang ? 'is-selected' : undefined}>
                 <input type="radio" name="lang" value={l} checked={l === lang} onChange={() => setLang(l)} />
                 {LANG_NAME[l]}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>{t.theme}</legend>
+          <div className="segmented">
+            {THEMES.map((th) => (
+              <label key={th} className={th === theme ? 'is-selected' : undefined}>
+                <input type="radio" name="theme" value={th} checked={th === theme} onChange={() => setTheme(th)} />
+                {th === 'light' ? `☀ ${t.light}` : `☾ ${t.dark}`}
               </label>
             ))}
           </div>
