@@ -2,6 +2,7 @@ import type { Card } from '../engine/cards';
 import { cardLabel, stationName, textOn } from './format';
 import { useLang } from './LangContext';
 import { network } from './network';
+import { OctopusLogo } from './OctopusLogo';
 
 const ACTION_ICON = { 'signal-fault': '⚠', terminus: '⇆', 'rush-hour': '+2' } as const;
 
@@ -48,6 +49,7 @@ export function CardView({ card, size = 'hand', playable, highlight, onClick, te
   const { lang, t } = useLang();
   const label = cardLabel(card, network, lang, t);
   const cls = ['card', `card-${size}`, `card-${card.kind}`];
+  if (card.kind === 'wild') cls.push(`card-${card.wild}`);
   if (playable) cls.push('is-playable');
   if (highlight) cls.push('is-drawn');
 
@@ -91,12 +93,24 @@ export function CardView({ card, size = 'hand', playable, highlight, onClick, te
       );
       break;
     case 'wild': {
+      if (card.wild === 'octopus') {
+        body = (
+          <>
+            <span className="octopus-title" aria-hidden>
+              八達通
+            </span>
+            <OctopusLogo className="octopus-logo" />
+            <span className="card-name">{t.wildName.octopus}</span>
+          </>
+        );
+        break;
+      }
       const stops = network.lines.map((l) => l.colour).join(', ');
       body = (
         <>
           <span className="card-wild-ring" style={{ background: `conic-gradient(${stops}, ${network.lines[0]!.colour})` }} />
           <span className="card-icon" aria-hidden>
-            {card.wild === 'typhoon' ? '+4' : '◎'}
+            +4
           </span>
           <span className="card-name">{t.wildName[card.wild]}</span>
         </>

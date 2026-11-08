@@ -573,6 +573,34 @@ button.card {
   padding: 2px;
 }
 
+/* Octopus wild card: grey card with the figure-8 logo. */
+.card-octopus {
+  background: #646567;
+  border-color: #4f5052;
+  color: #fff;
+  justify-content: space-between;
+}
+.octopus-title {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-align: left;
+  padding: 4px 5px 0;
+  letter-spacing: 0.05em;
+}
+.octopus-logo {
+  width: 88%;
+  align-self: center;
+  flex: 1;
+  min-height: 0;
+}
+.card-wild.card-octopus .card-name {
+  color: #fff;
+  background: none;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
 /* ---------- Dialogs ---------- */
 
 .overlay {
