@@ -4,8 +4,8 @@ import type { ReactNode } from 'react';
 import { createGame, DEFAULT_RULES, viewFor } from '../../engine/game';
 import { hk } from '../../engine/test-helpers';
 import type { RoomSnapshot, ServerMessage } from '../../shared/protocol';
-import { LangProvider } from '../LangContext';
-import { loadRules, saveRules } from '../settings';
+import { LangProvider } from '../i18n/LangContext';
+import { loadRules, saveRules } from '../common/settings';
 import type { SocketLike } from './connection';
 import { Lobby } from './Lobby';
 import { OnlineGame } from './OnlineGame';
@@ -58,7 +58,7 @@ afterEach(() => {
 describe('App and the online option', () => {
   async function renderApp() {
     const { App } = await import('../App');
-    const { LangProvider: Provider } = await import('../LangContext');
+    const { LangProvider: Provider } = await import('../i18n/LangContext');
     return render(
       <Provider>
         <App />

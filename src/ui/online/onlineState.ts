@@ -1,7 +1,7 @@
 /** What the browser knows about its online room, built from server messages. */
 import type { PlayerView, RejectReason } from '../../engine/game';
 import type { ErrorCode, RoomSnapshot, ServerMessage } from '../../shared/protocol';
-import type { LogEntry, LogItem, SeatInfo } from '../tableController';
+import type { LogEntry, LogItem, SeatInfo } from '../game/tableController';
 import type { ConnectionStatus } from './connection';
 
 export interface OnlineState {

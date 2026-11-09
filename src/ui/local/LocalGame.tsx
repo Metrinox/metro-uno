@@ -1,5 +1,5 @@
-import { GameScreen } from './GameScreen';
-import { useLang } from './LangContext';
+import { GameScreen } from '../game/GameScreen';
+import { useLang } from '../i18n/LangContext';
 import { useLocalGame, type GameConfig } from './useLocalGame';
 
 interface Props {

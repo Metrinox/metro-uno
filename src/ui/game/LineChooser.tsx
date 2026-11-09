@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { LineBadge } from './LineBadge';
-import { useLang } from './LangContext';
+import { LineBadge } from '../lines/LineBadge';
+import { useLang } from '../i18n/LangContext';
 
 interface Props {
   lines: string[];

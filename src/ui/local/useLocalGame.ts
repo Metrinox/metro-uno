@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { chooseAction } from '../engine/ai';
+import { chooseAction } from '../../engine/ai';
 import {
   applyAction,
   createGame,
@@ -8,9 +8,9 @@ import {
   type HouseRules,
   type RejectReason,
   viewFor,
-} from '../engine/game';
-import { network } from './network';
-import type { LogEntry, LogItem, SeatInfo, TableController } from './tableController';
+} from '../../engine/game';
+import { network } from '../common/network';
+import type { LogEntry, LogItem, SeatInfo, TableController } from '../game/tableController';
 
 export const HUMAN_ID = 'p0';
 

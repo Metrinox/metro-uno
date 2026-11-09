@@ -1,13 +1,13 @@
 import { useMemo, type ReactNode } from 'react';
-import { buildDeck, type Card } from '../engine/cards';
-import { CardView } from './CardView';
-import { lineName } from './format';
-import { LangToggle } from './LangToggle';
-import { ThemeToggle } from './ThemeToggle';
-import { useLang } from './LangContext';
-import { LineBadge } from './LineBadge';
-import { LineStrip } from './LineStrip';
-import { network } from './network';
+import { buildDeck, type Card } from '../../engine/cards';
+import { CardView } from '../cards/CardView';
+import { lineName } from '../i18n/format';
+import { LangToggle } from '../i18n/LangToggle';
+import { ThemeToggle } from '../theme/ThemeToggle';
+import { useLang } from '../i18n/LangContext';
+import { LineBadge } from '../lines/LineBadge';
+import { LineStrip } from '../lines/LineStrip';
+import { network } from '../common/network';
 
 interface Group {
   key: string;

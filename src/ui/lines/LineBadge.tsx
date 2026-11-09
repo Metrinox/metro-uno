@@ -1,6 +1,6 @@
-import { lineName, textOn } from './format';
-import { useLang } from './LangContext';
-import { network } from './network';
+import { lineName, textOn } from '../i18n/format';
+import { useLang } from '../i18n/LangContext';
+import { network } from '../common/network';
 
 export function LineBadge({ code, testId }: { code: string; testId?: string }) {
   const { lang } = useLang();

@@ -1,4 +1,4 @@
-import { DEFAULT_RULES } from '../engine/game';
+import { DEFAULT_RULES } from '../../engine/game';
 import { loadRules, saveRules } from './settings';
 
 function memoryStorage(): Storage {

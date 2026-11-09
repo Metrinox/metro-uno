@@ -1,5 +1,5 @@
 import { layoutLine } from './lineLayout';
-import { network } from './network';
+import { network } from '../common/network';
 
 const layout = (code: string) => layoutLine(network.lineByCode[code]!);
 const at = (code: string, id: string) => layout(code).stops.find((s) => s.stationId === id)!;

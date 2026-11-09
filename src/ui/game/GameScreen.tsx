@@ -1,17 +1,17 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import type { Card } from '../engine/cards';
-import { canPlay, isPlayable, lineChoices, sameNumberCards } from '../engine/game';
-import { CardView } from './CardView';
-import { cardName, handOrder, lineName } from './format';
-import type { Dict, Lang } from './i18n';
-import { LangToggle } from './LangToggle';
-import { ThemeToggle } from './ThemeToggle';
-import { LineBadge } from './LineBadge';
+import type { Card } from '../../engine/cards';
+import { canPlay, isPlayable, lineChoices, sameNumberCards } from '../../engine/game';
+import { CardView } from '../cards/CardView';
+import { cardName, handOrder, lineName } from '../i18n/format';
+import type { Dict, Lang } from '../i18n/i18n';
+import { LangToggle } from '../i18n/LangToggle';
+import { ThemeToggle } from '../theme/ThemeToggle';
+import { LineBadge } from '../lines/LineBadge';
 import { LineChooser } from './LineChooser';
-import { LineStrip } from './LineStrip';
+import { LineStrip } from '../lines/LineStrip';
 import { SameNumberChooser } from './SameNumberChooser';
-import { useLang } from './LangContext';
-import { network } from './network';
+import { useLang } from '../i18n/LangContext';
+import { network } from '../common/network';
 import { seatLabel, type LogItem, type SeatInfo, type TableController } from './tableController';
 
 interface Props {

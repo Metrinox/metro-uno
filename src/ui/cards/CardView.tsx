@@ -1,7 +1,7 @@
-import type { Card } from '../engine/cards';
-import { cardLabel, stationName, textOn } from './format';
-import { useLang } from './LangContext';
-import { network } from './network';
+import type { Card } from '../../engine/cards';
+import { cardLabel, stationName, textOn } from '../i18n/format';
+import { useLang } from '../i18n/LangContext';
+import { network } from '../common/network';
 import { OctopusLogo } from './OctopusLogo';
 
 const ACTION_ICON = { 'signal-fault': '⚠', terminus: '⇆', 'rush-hour': '+2' } as const;

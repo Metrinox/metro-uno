@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { isValidCode, normalizeCode, sanitizeName } from '../../shared/rooms';
-import { useLang } from '../LangContext';
-import { LangToggle } from '../LangToggle';
-import { loadName, saveName } from '../settings';
-import { ThemeToggle } from '../ThemeToggle';
+import { useLang } from '../i18n/LangContext';
+import { LangToggle } from '../i18n/LangToggle';
+import { loadName, saveName } from '../common/settings';
+import { ThemeToggle } from '../theme/ThemeToggle';
 
 interface Props {
   /** A code from a share link, filled in for the player. */

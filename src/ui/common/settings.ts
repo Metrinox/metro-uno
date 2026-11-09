@@ -1,4 +1,4 @@
-import { DEFAULT_RULES, normalizeRules, type HouseRules } from '../engine/game';
+import { DEFAULT_RULES, normalizeRules, type HouseRules } from '../../engine/game';
 
 const RULES_KEY = 'metro-uno.rules';
 

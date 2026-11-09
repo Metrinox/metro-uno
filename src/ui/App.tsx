@@ -1,14 +1,14 @@
 import { useCallback, useState } from 'react';
 import type { HouseRules } from '../engine/game';
 import { isValidCode, normalizeCode } from '../shared/rooms';
-import { useLang } from './LangContext';
-import { LocalGame } from './LocalGame';
+import { useLang } from './i18n/LangContext';
+import { LocalGame } from './local/LocalGame';
 import { loadSession, type Target } from './online/connection';
 import { OnlineGame, type OnlineExit } from './online/OnlineGame';
 import { OnlineMenu } from './online/OnlineMenu';
-import { loadRules, saveRules } from './settings';
-import { Setup } from './Setup';
-import type { GameConfig } from './useLocalGame';
+import { loadRules, saveRules } from './common/settings';
+import { Setup } from './setup/Setup';
+import type { GameConfig } from './local/useLocalGame';
 
 /** The game server's address, set at build time. Online play is hidden without it. */
 const SERVER_URL: string | undefined = import.meta.env.VITE_SERVER_URL || undefined;

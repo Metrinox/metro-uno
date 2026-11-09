@@ -1,4 +1,4 @@
-import type { Line } from '../data/network';
+import type { Line } from '../../data/network';
 
 /**
  * Lays out a line for the line strip: the trunk runs left to right on row 0,

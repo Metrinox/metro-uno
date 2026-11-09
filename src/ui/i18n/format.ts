@@ -1,5 +1,5 @@
-import type { Network } from '../data/network';
-import type { Card } from '../engine/cards';
+import type { Network } from '../../data/network';
+import type { Card } from '../../engine/cards';
 import type { Dict, Lang } from './i18n';
 
 /** Black or white text, whichever reads better on `hex`. */

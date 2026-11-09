@@ -1,4 +1,4 @@
-import { useLang } from './LangContext';
+import { useLang } from '../i18n/LangContext';
 import { useTheme } from './theme';
 
 /** Single button that flips between light and dark. */

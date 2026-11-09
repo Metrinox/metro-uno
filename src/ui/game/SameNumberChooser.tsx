@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Card } from '../engine/cards';
-import { CardView } from './CardView';
-import { useLang } from './LangContext';
-import { LineBadge } from './LineBadge';
+import type { Card } from '../../engine/cards';
+import { CardView } from '../cards/CardView';
+import { useLang } from '../i18n/LangContext';
+import { LineBadge } from '../lines/LineBadge';
 
 interface Props {
   /** The card the player tapped (playable). */

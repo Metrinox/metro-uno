@@ -2,10 +2,10 @@ import { useState } from 'react';
 import type { HouseRules } from '../../engine/game';
 import { MIN_PLAYERS } from '../../engine/game';
 import type { ClientMessage, LobbyRejectReason, RoomSnapshot } from '../../shared/protocol';
-import { HouseRulesEditor } from '../HouseRulesEditor';
-import { useLang } from '../LangContext';
-import { LangToggle } from '../LangToggle';
-import { ThemeToggle } from '../ThemeToggle';
+import { HouseRulesEditor } from '../setup/HouseRulesEditor';
+import { useLang } from '../i18n/LangContext';
+import { LangToggle } from '../i18n/LangToggle';
+import { ThemeToggle } from '../theme/ThemeToggle';
 
 interface Props {
   room: RoomSnapshot;

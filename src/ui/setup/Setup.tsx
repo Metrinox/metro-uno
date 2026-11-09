@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import type { HouseRules } from '../engine/game';
+import type { HouseRules } from '../../engine/game';
 import { HouseRulesEditor } from './HouseRulesEditor';
-import { LANGS } from './i18n';
-import { useLang } from './LangContext';
-import { network } from './network';
-import { THEMES, useTheme } from './theme';
+import { LANGS } from '../i18n/i18n';
+import { useLang } from '../i18n/LangContext';
+import { network } from '../common/network';
+import { THEMES, useTheme } from '../theme/theme';
 
 const LANG_NAME = { en: 'English', zh: '繁體中文' } as const;
 

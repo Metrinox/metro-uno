@@ -169,7 +169,7 @@ openspec/   Specs and change history
    - `loadNetwork` throws a clear error for an unknown station, an empty line, a duplicate line code, or a branch from a station not on the line.
 
 2. Add a test like `src/data/hk-mtr.test.ts` that checks line counts, interchanges, and a few numbers.
-3. Point `src/ui/network.ts` at the new data. There is no city picker yet.
+3. Point `src/ui/common/network.ts` at the new data. There is no city picker yet.
 
 ## Notes
 

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { stationName } from './format';
-import { useLang } from './LangContext';
+import { stationName } from '../i18n/format';
+import { useLang } from '../i18n/LangContext';
 import { layoutLine } from './lineLayout';
-import { network } from './network';
+import { network } from '../common/network';
 
 const COL_W = 58;
 const PAD_X = 36;

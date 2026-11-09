@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, renderHook } from '@testing-library/react';
-import { DEFAULT_RULES } from '../engine/game';
+import { DEFAULT_RULES } from '../../engine/game';
 import { HUMAN_ID, useLocalGame } from './useLocalGame';
 
 const config = { opponents: 2, seed: 'local-test', rules: { ...DEFAULT_RULES } };

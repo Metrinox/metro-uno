@@ -1,7 +1,7 @@
-import type { LocalizedName } from '../data/network';
-import type { ActionType, WildType } from '../engine/cards';
-import type { RejectReason } from '../engine/game';
-import type { ErrorCode, LobbyRejectReason } from '../shared/protocol';
+import type { LocalizedName } from '../../data/network';
+import type { ActionType, WildType } from '../../engine/cards';
+import type { RejectReason } from '../../engine/game';
+import type { ErrorCode, LobbyRejectReason } from '../../shared/protocol';
 
 export type Lang = 'en' | 'zh';
 export const LANGS: readonly Lang[] = ['en', 'zh'];

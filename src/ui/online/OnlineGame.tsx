@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import type { HouseRules } from '../../engine/game';
 import type { ErrorCode } from '../../shared/protocol';
-import { GameScreen } from '../GameScreen';
-import { useLang } from '../LangContext';
-import { saveRules } from '../settings';
+import { GameScreen } from '../game/GameScreen';
+import { useLang } from '../i18n/LangContext';
+import { saveRules } from '../common/settings';
 import type { SocketLike, Target } from './connection';
 import { Lobby } from './Lobby';
 import { useOnlineGame } from './useOnlineGame';

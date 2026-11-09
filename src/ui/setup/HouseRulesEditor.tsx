@@ -1,5 +1,5 @@
-import { DEFAULT_RULES, HAND_SIZE_MAX, HAND_SIZE_MIN, type HouseRules } from '../engine/game';
-import { useLang } from './LangContext';
+import { DEFAULT_RULES, HAND_SIZE_MAX, HAND_SIZE_MIN, type HouseRules } from '../../engine/game';
+import { useLang } from '../i18n/LangContext';
 
 type ToggleKey = 'drawUntilPlayable' | 'playDrawnCard' | 'mixDrawStacking' | 'playSameNumbers' | 'playUntilLast';
 

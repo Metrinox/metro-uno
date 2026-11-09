@@ -1,5 +1,5 @@
-import type { Action, GameEvent, PlayerView, RejectReason } from '../engine/game';
-import type { Dict } from './i18n';
+import type { Action, GameEvent, PlayerView, RejectReason } from '../../engine/game';
+import type { Dict } from '../i18n/i18n';
 
 /** Who sits in a seat, as the table shows it. */
 export interface SeatInfo {

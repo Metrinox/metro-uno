@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import type { Action, RejectReason } from '../../engine/game';
 import type { ClientMessage } from '../../shared/protocol';
-import type { TableController } from '../tableController';
+import type { TableController } from '../game/tableController';
 import { OnlineConnection, type SocketLike, type Target } from './connection';
 import { initialOnlineState, onlineReducer, seatsOf, type OnlineState } from './onlineState';
 
