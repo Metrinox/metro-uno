@@ -39,17 +39,26 @@ describe('room object', () => {
     host.send({ type: 'addBot', seat: 1 });
     await host.next('room', (m) => m.room.seats[1]?.kind === 'bot');
     host.send({ type: 'start' });
-    let table = await host.next('table');
-    // Play our own turns until it is the computer's turn.
-    while (table.view.turn === table.view.myIndex && table.view.phase === 'playing') {
-      const seen = host.inbox.length;
-      host.send({ type: 'act', action: chooseAction(table.view) });
-      table = await host.next('table', () => true, seen);
+    await host.next('table');
+    // Only the alarm moves a computer seat. With no pause the alarm may fire by
+    // itself before the test runs it, so look for the move anywhere in the round,
+    // playing our own turns as they come.
+    const botMove = () =>
+      host.inbox.find(
+        (m) => m.type === 'table' && m.events.some((e) => (e.type === 'played' || e.type === 'drew') && e.player === 's2'),
+      );
+    let answered = -1;
+    for (let i = 0; i < 500 && !botMove(); i++) {
+      const latest = host.inbox.findLastIndex((m) => m.type === 'table');
+      const table = host.inbox[latest];
+      if (latest > answered && table?.type === 'table' && table.view.phase === 'playing' && table.view.turn === table.view.myIndex) {
+        answered = latest;
+        host.send({ type: 'act', action: chooseAction(table.view) });
+      }
+      await runDurableObjectAlarm(stubFor(code));
+      await sleep(5);
     }
-    const seen = host.inbox.length;
-    await runDurableObjectAlarm(stubFor(code));
-    const after = await host.next('table', (m) => m.events.some((e) => e.type === 'played' || e.type === 'drew'), seen);
-    expect(after.events.find((e) => 'player' in e)).toMatchObject({ player: 's2' });
+    expect(botMove()).toBeTruthy();
     host.ws.close();
   });
 
