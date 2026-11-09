@@ -12,7 +12,7 @@ Be the first to get rid of all your cards.
 |---|---|
 | **Station** (81) | One per single-line station. It shows the station's line and its **number**. A line's number counts its stations from one end, skipping interchanges: on the East Rail Line, Admiralty is an interchange and Exhibition Centre is **1**. Branches carry on the count, so no number repeats on a line. Racecourse is a loop from Sha Tin to University and is numbered after the main line. |
 | **Interchange** ⇄ (17) | One per interchange station, e.g. Admiralty (ISL / TWL / EAL / SIL). It shows all its lines and has **no number**. |
-| **Signal Fault** ⚠ | Skip the next player. One per line. |
+| **Signal Fault** ⊘ | Skip the next player. One per line. |
 | **Terminus** (T in a U-turn arrow) | Reverse direction (with 2 players, acts as a skip). One per line. |
 | **Rush Hour** +2 | Next player draws 2 and misses their turn, unless they stack. One per line. |
 | **Octopus** ◎ | Wild: change to any line. 4 in the deck. |

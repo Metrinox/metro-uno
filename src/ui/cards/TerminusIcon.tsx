@@ -8,7 +8,7 @@
  */
 export function TerminusIcon() {
   return (
-    <svg className="terminus-icon" viewBox="0 0 24 24" aria-hidden data-testid="terminus-icon">
+    <svg className="card-svg-icon" viewBox="0 0 24 24" aria-hidden data-testid="terminus-icon">
       <g fill="none" stroke="currentColor" strokeLinecap="round">
         <path d="M6.21 18.89A9 9 0 1 1 17.79 18.89" strokeWidth="1.8" />
         <path d="M8 8.5H16M12 8.5V16.5" strokeWidth="2.4" />
