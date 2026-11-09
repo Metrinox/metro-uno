@@ -64,7 +64,7 @@
 
 ## 10. Final integration check
 
-- [ ] 10.1 Run `npm run lint`, `npm test`, `npm run build`, `npx wrangler deploy --dry-run`, and `npm run e2e` together on a clean checkout. All must pass. Then do a manual two-device smoke test on the LAN (phone plus desktop) against `npm run server:dev` (started with `--ip 0.0.0.0`), and record the result.
+- [x] 10.1 Run `npm run lint`, `npm test`, `npm run build`, `npx wrangler deploy --dry-run`, and `npm run e2e` together on a clean checkout. All must pass. Then do a manual two-device smoke test on the LAN (phone plus desktop) against `npm run server:dev` (started with `--ip 0.0.0.0`), and record the result.
 
 ## Workflow follow-up
 

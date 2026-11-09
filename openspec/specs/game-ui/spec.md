@@ -7,25 +7,39 @@ Defines the browser interface for a single-player game against computer opponent
 ## Requirements
 
 ### Requirement: Game setup screen
-Before a round, the player SHALL be able to choose 1–3 computer opponents, a language, and the house rules, then start the game.
+Before a round, the player SHALL be able to choose 1–3 computer opponents, a language, and the house rules, then start the game. The setup screen SHALL also offer Play online, which leads to creating or joining a room, whenever the site is built with a game server address. When it is built without one, the online option SHALL NOT be shown, and single-player SHALL work exactly as before.
 
 #### Scenario: Start with two opponents
 - **WHEN** the player chooses 2 opponents and presses Start
 - **THEN** a 3-player round begins, with the human as one of the players
+
+#### Scenario: Online option shown
+- **WHEN** the site is built with a game server address and the setup screen is shown
+- **THEN** a Play online control is visible next to the single-player Start
+
+#### Scenario: No server configured
+- **WHEN** the site is built without a game server address
+- **THEN** the setup screen shows no online option, and starting a single-player game needs no network connection
 
 ### Requirement: Table view
 During a round the screen SHALL show:
 - the player's hand
 - the top discard card
 - the draw pile
-- each opponent's card count
+- each opponent's name and card count
 - whose turn it is
 - the turn direction
 - the current line, by name and colour
 
+In an online round, the screen SHALL also mark each opponent as a human or a computer player, and SHALL show which opponents are disconnected.
+
 #### Scenario: Table contents
 - **WHEN** a round is in progress
 - **THEN** all of the listed items are visible without scrolling on a 360×640 screen and on a 1280×800 screen
+
+#### Scenario: Opponent names online
+- **WHEN** an online round is in progress with players "Mei" and "Ka Ho" and one computer player
+- **THEN** "Mei" sees opponents labelled "Ka Ho" and a computer player, with their card counts
 
 ### Requirement: Current line strip
 The screen SHALL show the current line's stations in order, with each single-line station's number and each interchange marked as an interchange, and SHALL highlight the top card's station when it is on that line. Branches SHALL be drawn beside the main route, starting at the station they leave from, not appended at the end. Each section of track SHALL be drawn in the colour of every label that covers it, side by side where several do.
@@ -118,11 +132,15 @@ The screen SHALL briefly report each play, draw, skip, reverse, line change, and
 - **THEN** a message names the opponent and the effect, and the human's hand grows by 2
 
 ### Requirement: End of round
-When the round ends, the screen SHALL announce the winner and offer to play again or return to setup.
+When the round ends, the screen SHALL announce the winner and offer to play again or return to setup. In an online room, only the host SHALL be offered Play again and Back to lobby. Every player SHALL be offered Leave room.
 
 #### Scenario: Play again
 - **WHEN** the round has ended and the player chooses Play Again
 - **THEN** a new round starts with the same number of opponents and a new shuffle
+
+#### Scenario: Guest at end of online round
+- **WHEN** an online round ends
+- **THEN** a guest sees the results and a Leave room control, plus a note that the host will start the next round, and does not see Play again
 
 ### Requirement: Asset gallery page
 The site SHALL have a page at `/gallery` that shows every line and every card in the deck, for reviewing the artwork. For each line it SHALL show the line's labels, name, and line diagram. It SHALL show every card once, grouped by line, with interchanges and wild cards in their own groups. The language switch SHALL work on this page, and the page SHALL link back to the game.
@@ -148,3 +166,17 @@ The game SHALL be playable by touch on phones and by mouse or keyboard on deskto
 #### Scenario: Phone width
 - **WHEN** the game is shown at 360px width
 - **THEN** the page does not scroll horizontally and every control can be reached by touch
+
+### Requirement: Same table for local and online games
+The table controls (playing a card, choosing a line, playing same-number cards together, drawing, passing, and calling UNO) SHALL look and behave the same in single-player and online rounds.
+
+#### Scenario: UNO online
+- **WHEN** an online player has 2 cards on their turn, presses UNO!, and plays one
+- **THEN** UNO is called for them and no penalty is applied, just as in single-player
+
+### Requirement: Online screens are translated
+The online menu, join form, lobby, and connection messages SHALL be available in English and Traditional Chinese. They SHALL follow the language switch.
+
+#### Scenario: Lobby in Chinese
+- **WHEN** a player switches to Traditional Chinese in the lobby
+- **THEN** lobby labels and controls appear in Chinese, and player names appear exactly as entered
