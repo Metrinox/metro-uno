@@ -20,3 +20,22 @@ export function saveRules(rules: HouseRules, storage: () => Storage | undefined 
     /* storage unavailable: the rules just aren't remembered */
   }
 }
+
+const NAME_KEY = 'metro-uno.name';
+
+/** The name last used for online play, or ''. */
+export function loadName(storage: () => Storage | undefined = () => globalThis.localStorage): string {
+  try {
+    return storage()?.getItem(NAME_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+export function saveName(name: string, storage: () => Storage | undefined = () => globalThis.localStorage): void {
+  try {
+    storage()?.setItem(NAME_KEY, name);
+  } catch {
+    /* storage unavailable */
+  }
+}

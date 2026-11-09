@@ -1,17 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { chooseAction } from '../engine/ai';
 import {
   applyAction,
   createGame,
   type Action,
-  type ActionResult,
-  type GameEvent,
   type GameState,
   type HouseRules,
   type RejectReason,
   viewFor,
 } from '../engine/game';
 import { network } from './network';
+import type { LogEntry, LogItem, SeatInfo, TableController } from './tableController';
 
 export const HUMAN_ID = 'p0';
 
@@ -21,9 +20,7 @@ export interface GameConfig {
   rules: HouseRules;
 }
 
-export type LogItem = { id: number } & (GameEvent | { type: 'rejected'; reason: RejectReason });
-
-export interface ControllerOptions {
+export interface LocalGameOptions {
   /** Pause before each computer action, in ms: [min, max]. */
   aiDelay: [number, number];
 }
@@ -42,8 +39,8 @@ declare global {
   }
 }
 
-/** Runs one round. Remount (change the React key) to start a new round. */
-export function useGameController(config: GameConfig, { aiDelay }: ControllerOptions) {
+/** Runs one single-player round in the browser. Remount (change the React key) to start a new round. */
+export function useLocalGame(config: GameConfig, { aiDelay }: LocalGameOptions): TableController {
   const [state, setState] = useState<GameState>(() => newGame(config));
   const [log, setLog] = useState<LogItem[]>([]);
   const stateRef = useRef(state);
@@ -54,22 +51,25 @@ export function useGameController(config: GameConfig, { aiDelay }: ControllerOpt
     setState(s);
   }, []);
 
-  const pushLog = useCallback((items: (GameEvent | { type: 'rejected'; reason: RejectReason })[]) => {
+  const pushLog = useCallback((items: LogEntry[]) => {
     const withIds = items.map((e) => ({ ...e, id: nextLogId.current++ }) as LogItem);
     setLog((prev) => [...prev, ...withIds].slice(-40));
   }, []);
 
   const act = useCallback(
-    (playerId: string, action: Action): ActionResult => {
+    (playerId: string, action: Action) => {
       const r = applyAction(stateRef.current, playerId, action);
       if (r.ok) {
         commit(r.state);
         pushLog(r.events);
+      } else if (playerId === HUMAN_ID) {
+        pushLog([{ type: 'rejected', reason: r.reason }]);
       }
-      return r;
     },
     [commit, pushLog],
   );
+
+  const send = useCallback((action: Action) => act(HUMAN_ID, action), [act]);
 
   /** Reports a move the UI refused before it reached the engine (e.g. tapping an unplayable card). */
   const reject = useCallback((reason: RejectReason) => pushLog([{ type: 'rejected', reason }]), [pushLog]);
@@ -99,5 +99,20 @@ export function useGameController(config: GameConfig, { aiDelay }: ControllerOpt
     };
   }, [commit]);
 
-  return { state, log, act, reject };
+  const view = useMemo(() => viewFor(state, HUMAN_ID), [state]);
+  const seats = useMemo<SeatInfo[]>(
+    () =>
+      state.players.map((p) => ({
+        id: p.id,
+        name: p.name,
+        kind: p.isHuman ? 'human' : 'bot',
+        botNumber: p.isHuman ? 0 : Number(p.id.replace(/\D/g, '')),
+        connected: true,
+        isMe: p.id === HUMAN_ID,
+        isHost: p.id === HUMAN_ID,
+      })),
+    [state.players],
+  );
+
+  return { view, seats, log, send, reject };
 }

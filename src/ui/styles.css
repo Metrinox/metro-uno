@@ -197,6 +197,138 @@ legend {
   font-size: 1.1rem;
 }
 
+/* ---------- Online: menu and lobby ---------- */
+
+.card-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -8px -8px 0;
+}
+.card-toolbar .spacer {
+  flex: 1;
+}
+.btn-online {
+  margin-top: -6px;
+}
+.field {
+  display: grid;
+  gap: 6px;
+}
+.field-label {
+  font-weight: 600;
+}
+.field input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  min-width: 0;
+  width: 100%;
+}
+.field input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
+}
+.code-input {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 1.4rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+.join-form {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.join-heading {
+  font-size: 1rem;
+  color: var(--muted);
+  margin: 0;
+}
+.online-message {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  background: var(--surface-2);
+}
+.room-code {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
+.share {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+.seats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.seat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 4px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.seat.is-empty {
+  border-style: dashed;
+  color: var(--muted);
+}
+.seat-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+.badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.badge-host {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.badge-away {
+  font-style: italic;
+}
+.rules-note,
+.lobby-wait {
+  margin: 0;
+  color: var(--muted);
+}
+.house-rules.is-read-only .rule {
+  cursor: default;
+}
+.connection-banner {
+  margin: 0;
+  padding: 8px 16px;
+  text-align: center;
+  font-weight: 600;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
 /* ---------- Game layout ---------- */
 
 .game {
@@ -282,6 +414,15 @@ legend {
   text-overflow: ellipsis;
   max-width: 100%;
 }
+.opponent.is-away .opponent-name {
+  opacity: 0.6;
+}
+
+.opponent-away {
+  font-weight: normal;
+  font-style: italic;
+}
+
 .opponent-count {
   color: var(--muted);
 }

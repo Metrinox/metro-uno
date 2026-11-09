@@ -1,0 +1,23 @@
+// Cloudflare Worker for online play (design.md §2, §11).
+// The static site is still built by Vite and hosted on GitHub Pages; this Worker
+// only runs the game server: one Durable Object per room.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "metro-uno-server",
+  "main": "server/worker.ts",
+  "compatibility_date": "2026-11-01",
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "RoomObject" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RoomObject"] }],
+  "vars": {
+    // Comma-separated list of sites allowed to open game connections.
+    "ALLOWED_ORIGINS": "https://metro-uno.duckdns.org",
+    // Pause before each computer move, in ms.
+    "AI_DELAY_MS": "2000",
+    // "test" lets SEED_PREFIX fix the shuffles; never set it in production.
+    "ENVIRONMENT": "production",
+    "SEED_PREFIX": ""
+  },
+  "observability": { "enabled": true }
+}

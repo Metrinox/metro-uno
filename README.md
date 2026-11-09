@@ -1,6 +1,6 @@
 # Metro Uno
 
-*Working title.* A shedding card game played on the Hong Kong MTR. Lines are the colours and stations are the numbers. Play in the browser against 1–3 computer opponents, in English or Traditional Chinese (繁體中文).
+*Working title.* A shedding card game played on the Hong Kong MTR. Lines are the colours and stations are the numbers. Play in the browser against 1–3 computer opponents, or online with friends, in English or Traditional Chinese (繁體中文).
 
 ## How to play
 
@@ -47,6 +47,16 @@ Set these on the setup screen. They're remembered on your device and fixed for t
 
 "Draw until you can play" makes rounds much longer: players often draw several cards before finding a match, so hands grow.
 
+### Playing online
+
+Choose **Play online** on the setup screen. It only appears when the site was built with a game server address.
+
+1. Enter your name and choose **Create room**. You get a 4-character room code and a link to share.
+2. Friends open the link, or choose **Play online** and type the code, then enter their names. A room has up to 4 seats.
+3. The host sets the house rules, can fill empty seats with computer players, and presses **Start**.
+
+Each player sees only their own hand. If your connection drops, the game reconnects by itself. If you reload or reopen the page in the same browser, you return to your seat. While you're away, a computer plays your turns. If you leave during a round, a computer takes your seat until the round ends. If the host leaves, another player becomes host. At the end of a round, the host can start another one in the same room. A room with nobody connected closes after 5 minutes.
+
 ## Development
 
 Requires Node.js 20+.
@@ -62,7 +72,50 @@ npm run build                    # type-check and build the static site into dis
 npm run preview                  # serve the production build locally
 ```
 
-`dist/` is a static site with no backend. Upload it to any static host.
+`dist/` is a static site. Upload it to any static host. Single-player needs nothing else. Online play also needs the game server (below).
+
+`npm test` runs two suites: the Node tests (`vite.config.ts`), and the game-server tests inside the Cloudflare Workers runtime (`vitest.worker.config.ts`, files named `*.worker.test.ts`). `npm run test:worker` runs only the second. The e2e tests start a local game server themselves.
+
+### Online play locally
+
+The game server is a Cloudflare Worker with one Durable Object per room (`server/`). It runs locally without a Cloudflare account:
+
+```bash
+cp .dev.vars.example .dev.vars           # one-time: lets localhost pages connect
+npm run server:dev                       # game server at http://localhost:8787
+VITE_SERVER_URL=ws://localhost:8787 npm run dev   # in a second terminal
+```
+
+To try it with a phone on the same network, start the server with `npm run server:dev -- --ip 0.0.0.0`, start Vite with `--host`, add the page's address (e.g. `http://192.168.1.20:5173`) to `ALLOWED_ORIGINS` in `.dev.vars`, and use `ws://<your computer's IP>:8787` as `VITE_SERVER_URL`.
+
+Run `npm run cf-typegen` after changing `wrangler.jsonc`, to regenerate `worker-configuration.d.ts`.
+
+**Server settings** (`vars` in `wrangler.jsonc`, overridden locally by `.dev.vars`):
+
+| Variable | Default | What it does |
+|---|---|---|
+| `ALLOWED_ORIGINS` | `https://metro-uno.duckdns.org` | Comma-separated sites allowed to connect. |
+| `AI_DELAY_MS` | `2000` | Pause before each computer move, in ms. |
+| `ENVIRONMENT` | `production` | `test` allows `SEED_PREFIX`. |
+| `SEED_PREFIX` | (empty) | Test-only: fixes the shuffles. Ignored unless `ENVIRONMENT` is `test`. |
+
+The site reads the server address from `VITE_SERVER_URL` at build time. Online play is hidden when it is unset.
+
+### Cloudflare server
+
+The game server runs on Cloudflare's Workers Free plan. The site itself stays on GitHub Pages.
+
+1. Create a free Cloudflare account and choose a workers.dev subdomain (Workers & Pages in the dashboard).
+2. Create an API token from the **Edit Cloudflare Workers** template (My Profile → API Tokens). Copy your **Account ID** from the Workers & Pages overview.
+3. In the GitHub repository settings, add the secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+4. Push to `main`, or run the **Deploy game server** workflow by hand. Check that `https://metro-uno-server.<subdomain>.workers.dev/healthz` answers `ok`.
+5. Add the repository variable `SERVER_URL` = `wss://metro-uno-server.<subdomain>.workers.dev` and re-run the Pages deploy. **Play online** appears.
+
+Notes:
+
+- `.github/workflows/deploy-server.yml` deploys the server when `server/`, `src/engine`, `src/data`, `src/shared`, or `wrangler.jsonc` change on `main`. A deploy closes open connections. Players reconnect automatically, and their rooms are kept.
+- Usage on the Free plan (requests and Durable Object time) is shown in the Cloudflare dashboard under Workers & Pages. When a daily limit is reached, requests fail until the next day. There is no bill.
+- To undo a bad server deploy, run `npx wrangler rollback`. To turn online play off, clear `SERVER_URL` and re-run the Pages deploy.
 
 **Card gallery:** open `/gallery/` (e.g. http://localhost:5173/gallery/) to see every line diagram and all 130 cards, in either language. It's a separate page (`gallery/index.html`), so it works on any static host.
 
@@ -74,13 +127,16 @@ URL options for testing: `?seed=abc` fixes the shuffle, and `?aiDelay=0` removes
 src/
   data/     Network format, loader/validator, and city data (hk-mtr.ts)
   engine/   Rules (game.ts), deck (cards.ts), AI (ai.ts), seeded RNG, simulation
+  shared/   Online protocol messages and validators, room codes, names
   ui/       React app: screens, cards, line strip, i18n
+  ui/online/  Online menu, lobby, server connection
+server/     Game server: Worker routing, room Durable Object, pure room logic (room.ts)
 gallery/    The /gallery card gallery page (entry HTML)
 e2e/        Playwright browser tests
 openspec/   Specs and change history
 ```
 
-`src/engine` and `src/data` must not import React, browser globals, `Math.random`, or anything from `src/ui`, and ESLint enforces this. The rules engine is pure (`applyAction(state, playerId, action)` returns a new state plus events), so a future online server can run the same code. Players and the AI only see a `PlayerView` from `viewFor()`, never other hands.
+`src/engine`, `src/data` and `src/shared` must not import React, browser globals, `Math.random`, or anything from `src/ui`, and `server/` must not import `src/ui` either. ESLint enforces this. The rules engine is pure (`applyAction(state, playerId, action)` returns a new state plus events), so the game server runs the same code as the browser. Players and the AI only see a `PlayerView` from `viewFor()`, never other hands, and the server only ever sends each player their own view.
 
 ## Adding a city
 

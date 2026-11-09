@@ -39,7 +39,8 @@ test.describe('table', () => {
       for (const id of ['hand', 'discard-top', 'draw-pile', 'turn', 'direction', 'current-line', 'line-strip']) {
         await expect(page.getByTestId(id)).toBeInViewport();
       }
-      for (const id of ['ai1', 'ai2', 'ai3']) {
+      for (const [i, id] of ['ai1', 'ai2', 'ai3'].entries()) {
+        await expect(page.getByTestId(`opponent-${id}`).locator('.opponent-name')).toHaveText(`Computer ${i + 1}`);
         await expect(page.getByTestId(`count-${id}`)).toBeInViewport();
         await expect(page.getByTestId(`count-${id}`)).toHaveText('7 cards');
       }

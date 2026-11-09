@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import type { Card } from '../engine/cards';
-import { canPlay, isPlayable, lineChoices, sameNumberCards, topCard } from '../engine/game';
+import { canPlay, isPlayable, lineChoices, sameNumberCards } from '../engine/game';
 import { CardView } from './CardView';
 import { cardName, handOrder, lineName } from './format';
 import type { Dict, Lang } from './i18n';
@@ -12,22 +12,22 @@ import { LineStrip } from './LineStrip';
 import { SameNumberChooser } from './SameNumberChooser';
 import { useLang } from './LangContext';
 import { network } from './network';
-import { HUMAN_ID, useGameController, type GameConfig, type LogItem } from './useGameController';
+import { seatLabel, type LogItem, type SeatInfo, type TableController } from './tableController';
 
 interface Props {
-  config: GameConfig;
-  aiDelay: [number, number];
-  onPlayAgain: () => void;
-  onSetup: () => void;
+  controller: TableController;
+  /** The top-bar button: back to setup (local) or leave the room (online). */
+  menuLabel: string;
+  onMenu: () => void;
+  /** Buttons (and any note) shown under the results when the round ends. */
+  endActions: ReactNode;
+  /** Shown above the table, e.g. a connection banner. */
+  banner?: ReactNode;
 }
 
-export function displayName(id: string, t: Dict): string {
-  if (id === HUMAN_ID) return t.you;
-  return t.computer(Number(id.replace(/\D/g, '')));
-}
+type Who = (id: string) => { who: string; you: boolean };
 
-function describe(item: LogItem, t: Dict, lang: Lang): string | null {
-  const who = (id: string) => ({ who: displayName(id, t), you: id === HUMAN_ID });
+function describe(item: LogItem, t: Dict, lang: Lang, who: Who): string | null {
   switch (item.type) {
     case 'played':
       return t.ev.played(who(item.player), cardName(item.card, network, lang, t));
@@ -59,48 +59,50 @@ function describe(item: LogItem, t: Dict, lang: Lang): string | null {
   }
 }
 
-export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
+export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }: Props) {
   const { lang, t } = useLang();
-  const { state, log, act, reject } = useGameController(config, { aiDelay });
+  const { view, seats, log, send, reject } = controller;
   const [choosing, setChoosing] = useState<{ cards: Card[]; lines: string[] } | null>(null);
   const [grouping, setGrouping] = useState<{ first: Card; others: Card[] } | null>(null);
   const [unoArmed, setUnoArmed] = useState(false);
 
-  const me = state.players.find((p) => p.id === HUMAN_ID)!;
-  const myTurn = state.phase === 'playing' && state.players[state.turn]!.id === HUMAN_ID;
-  const top = topCard(state);
-  const hand = useMemo(() => me.hand.slice().sort(handOrder(network)), [me.hand]);
+  const seatById = useMemo(() => new Map<string, SeatInfo>(seats.map((s) => [s.id, s])), [seats]);
+  const nameOf = (id: string) => seatLabel(seatById.get(id), t);
+  const who: Who = (id) => ({ who: nameOf(id), you: id === view.me });
+
+  const myTurn = view.phase === 'playing' && view.turn === view.myIndex;
+  const top = view.topCard;
+  const hand = useMemo(() => view.hand.slice().sort(handOrder(network)), [view.hand]);
   const playableNow = (c: Card) =>
-    myTurn && (state.drawnCardId === null || state.drawnCardId === c.id) && canPlay(c, state);
+    myTurn && (view.drawnCardId === null || view.drawnCardId === c.id) && canPlay(c, view);
   // Two cards, or more when same-number cards can be played together.
-  const unoAvailable = myTurn && me.hand.length >= 2 && (me.hand.length === 2 || state.rules.playSameNumbers);
-  const pending = state.pendingDraw;
+  const unoAvailable = myTurn && view.hand.length >= 2 && (view.hand.length === 2 || view.rules.playSameNumbers);
+  const pending = view.pendingDraw;
   const highlightStation =
-    (top.kind === 'station' && top.line === state.currentLine) ||
-    (top.kind === 'interchange' && top.lines.includes(state.currentLine))
+    (top.kind === 'station' && top.line === view.currentLine) ||
+    (top.kind === 'interchange' && top.lines.includes(view.currentLine))
       ? top.stationId
       : null;
 
-  /** Plays `cards` in order (the last one sets the line). */
+/** Plays `cards` in order (the last one sets the line). */
   const play = useCallback(
     (cards: Card[], chosenLine?: string) => {
       const [first, ...extras] = cards;
-      const r = act(HUMAN_ID, {
+      send({
         type: 'play',
         cardId: first!.id,
         ...(extras.length > 0 ? { extraCardIds: extras.map((c) => c.id) } : {}),
         chosenLine,
         callUno: unoArmed,
       });
-      if (!r.ok) reject(r.reason);
       setUnoArmed(false);
     },
-    [act, reject, unoArmed],
+    [send, unoArmed],
   );
 
   /** Asks for a line if the last card needs one, then plays. */
   const playWithLine = (cards: Card[]) => {
-    const lines = lineChoices(cards[cards.length - 1]!, state.lines, state.currentLine);
+    const lines = lineChoices(cards[cards.length - 1]!, view.lines, view.currentLine);
     // Ask only when there is a real choice; a 2-line interchange changes line on its own.
     if (lines && lines.length > 1) setChoosing({ cards, lines });
     else play(cards, lines?.[0]);
@@ -108,20 +110,17 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
 
   const onCard = (card: Card) => {
     if (!myTurn) return reject('not-your-turn');
-    if (state.drawnCardId !== null && state.drawnCardId !== card.id) {
-      return reject(state.mustPlayDrawn ? 'must-play-drawn-card' : 'must-play-drawn-card-or-pass');
+    if (view.drawnCardId !== null && view.drawnCardId !== card.id) {
+      return reject(view.mustPlayDrawn ? 'must-play-drawn-card' : 'must-play-drawn-card-or-pass');
     }
-    if (!canPlay(card, state)) return reject('not-playable');
-    const others = state.rules.playSameNumbers && state.drawnCardId === null ? sameNumberCards(card, me.hand) : [];
+    if (!canPlay(card, view)) return reject('not-playable');
+    const others = view.rules.playSameNumbers && view.drawnCardId === null ? sameNumberCards(card, view.hand) : [];
     if (others.length > 0) setGrouping({ first: card, others: others.sort(handOrder(network)) });
     else playWithLine([card]);
   };
 
   const drawLabel = pending && myTurn ? t.drawN(pending.count) : t.draw;
-  const doDraw = () => {
-    const r = act(HUMAN_ID, { type: 'draw' });
-    if (!r.ok) reject(r.reason);
-  };
+  const doDraw = () => send({ type: 'draw' });
 
   const recent = log
     // A pending draw that resolved straight away is covered by the "drew" message that follows.
@@ -130,18 +129,18 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
       const next = log.slice(i + 1).find((e) => e.type !== 'turn');
       return !(next?.type === 'drew' && next.player === item.player && next.reason === 'stack');
     })
-    .map((item) => ({ id: item.id, text: describe(item, t, lang), rejected: item.type === 'rejected' }))
+    .map((item) => ({ id: item.id, text: describe(item, t, lang, who), rejected: item.type === 'rejected' }))
     .filter((m) => m.text !== null)
     .slice(-3);
-  const turnText = myTurn ? t.yourTurn : t.theirTurn(displayName(state.players[state.turn]!.id, t));
-  const ended = state.phase === 'ended';
-  const winner = ended ? state.winner : null;
-  const placeOf = (id: string) => state.finished.indexOf(id) + 1;
-  const myPlace = placeOf(HUMAN_ID);
+  const turnText = myTurn ? t.yourTurn : t.theirTurn(nameOf(view.players[view.turn]!.id));
+  const ended = view.phase === 'ended';
+  const winner = ended ? view.winner : null;
+  const placeOf = (id: string) => view.finished.indexOf(id) + 1;
+  const myPlace = placeOf(view.me);
   // Finishing order, then anyone still holding cards (the last place).
   const standings = [
-    ...state.finished,
-    ...state.players.filter((p) => !state.finished.includes(p.id)).map((p) => p.id),
+    ...view.finished,
+    ...view.players.filter((p) => !view.finished.includes(p.id)).map((p) => p.id),
   ];
 
   return (
@@ -150,21 +149,29 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
         <h1 className="brand">{t.title}</h1>
         <ThemeToggle />
         <LangToggle />
-        <button type="button" className="btn btn-quiet" onClick={onSetup}>
-          {t.menu}
+        <button type="button" className="btn btn-quiet" onClick={onMenu} data-testid="menu">
+          {menuLabel}
         </button>
       </header>
 
+      {banner}
+
       <ul className="opponents" aria-label={t.opponents}>
-        {state.players
-          .filter((p) => p.id !== HUMAN_ID)
+        {view.players
+          .filter((p) => p.id !== view.me)
           .map((p) => {
-            const active = state.players[state.turn]!.id === p.id && state.phase === 'playing';
+            const active = view.players[view.turn]!.id === p.id && view.phase === 'playing';
+            const seat = seatById.get(p.id);
+            const away = seat !== undefined && !seat.connected;
+            const classes = ['opponent', active && 'is-active', away && 'is-away'].filter(Boolean).join(' ');
             return (
-              <li key={p.id} className={active ? 'opponent is-active' : 'opponent'} data-testid={`opponent-${p.id}`} aria-current={active ? 'true' : undefined}>
-                <span className="opponent-name">{displayName(p.id, t)}</span>
+              <li key={p.id} className={classes} data-testid={`opponent-${p.id}`} aria-current={active ? 'true' : undefined}>
+                <span className="opponent-name">
+                  {nameOf(p.id)}
+                  {away && <span className="opponent-away"> · {t.away}</span>}
+                </span>
                 <span className="opponent-count" data-testid={`count-${p.id}`}>
-                  {placeOf(p.id) > 0 ? t.place(placeOf(p.id)) : t.cards(p.hand.length)}
+                  {placeOf(p.id) > 0 ? t.place(placeOf(p.id)) : t.cards(p.cardCount)}
                 </span>
               </li>
             );
@@ -174,9 +181,9 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
       <section className="table" aria-label={t.currentLine}>
         <div className="table-info">
           <span className="label">{t.currentLine}</span>
-          <LineBadge code={state.currentLine} testId="current-line" />
+          <LineBadge code={view.currentLine} testId="current-line" />
           <span className="direction" data-testid="direction" title={t.direction}>
-            {state.direction === 1 ? '↻' : '↺'} {state.direction === 1 ? t.clockwise : t.anticlockwise}
+            {view.direction === 1 ? '↻' : '↺'} {view.direction === 1 ? t.clockwise : t.anticlockwise}
           </span>
         </div>
         <CardView card={top} size="table" testId="discard-top" />
@@ -184,18 +191,18 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
           type="button"
           className="draw-pile"
           onClick={doDraw}
-          disabled={!myTurn || state.drawnCardId !== null}
+          disabled={!myTurn || view.drawnCardId !== null}
           data-testid="draw-pile"
-          aria-label={`${t.drawPile}: ${t.cards(state.drawPile.length)}. ${drawLabel}`}
+          aria-label={`${t.drawPile}: ${t.cards(view.drawPileCount)}. ${drawLabel}`}
         >
           <span className="draw-pile-back" aria-hidden>
             M
           </span>
-          <span className="draw-pile-count">{state.drawPile.length}</span>
+          <span className="draw-pile-count">{view.drawPileCount}</span>
         </button>
       </section>
 
-      <LineStrip line={state.currentLine} highlightStation={highlightStation} />
+      <LineStrip line={view.currentLine} highlightStation={highlightStation} />
 
       <section className="status">
         {myPlace > 0 && !ended && (
@@ -205,8 +212,8 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
         )}
         <p className={myTurn ? 'turn is-mine' : 'turn'} data-testid="turn">
           {turnText}
-          {myTurn && state.drawnCardId !== null && (
-            <span className="hint"> · {state.mustPlayDrawn ? t.mustPlayHint : t.drawnHint}</span>
+          {myTurn && view.drawnCardId !== null && (
+            <span className="hint"> · {view.mustPlayDrawn ? t.mustPlayHint : t.drawnHint}</span>
           )}
         </p>
         {myTurn && pending && (
@@ -237,7 +244,7 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
         <button
           type="button"
           className="btn"
-          disabled={!myTurn || state.drawnCardId !== null}
+          disabled={!myTurn || view.drawnCardId !== null}
           onClick={doDraw}
           data-testid="draw"
         >
@@ -246,11 +253,8 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
         <button
           type="button"
           className="btn"
-          disabled={!myTurn || state.drawnCardId === null || state.mustPlayDrawn}
-          onClick={() => {
-            const r = act(HUMAN_ID, { type: 'pass' });
-            if (!r.ok) reject(r.reason);
-          }}
+          disabled={!myTurn || view.drawnCardId === null || view.mustPlayDrawn}
+          onClick={() => send({ type: 'pass' })}
           data-testid="pass"
         >
           {t.pass}
@@ -259,7 +263,7 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
 
       <section className="hand" aria-label={`${t.you}: ${t.cards(hand.length)}`} data-testid="hand">
         {hand.map((c) => (
-          <CardView key={c.id} card={c} playable={playableNow(c)} highlight={state.drawnCardId === c.id} onClick={() => onCard(c)} />
+          <CardView key={c.id} card={c} playable={playableNow(c)} highlight={view.drawnCardId === c.id} onClick={() => onCard(c)} />
         ))}
       </section>
 
@@ -267,7 +271,7 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
         <SameNumberChooser
           first={grouping.first}
           others={grouping.others}
-          canLead={(c) => isPlayable(c, state.currentLine, state.face)}
+          canLead={(c) => isPlayable(c, view.currentLine, view.face)}
           onCancel={() => setGrouping(null)}
           onPlay={(cards) => {
             setGrouping(null);
@@ -291,24 +295,17 @@ export function GameScreen({ config, aiDelay, onPlayAgain, onSetup }: Props) {
       {winner && (
         <div className="overlay">
           <div className="dialog" role="dialog" aria-modal="true" aria-labelledby="winner-title" data-testid="end-screen">
-            <h2 id="winner-title">{t.winner({ who: displayName(winner, t), you: winner === HUMAN_ID })}</h2>
-            {state.finished.length > 1 && (
+            <h2 id="winner-title">{t.winner(who(winner))}</h2>
+            {view.finished.length > 1 && (
               <ol className="standings" aria-label={t.standings} data-testid="standings">
                 {standings.map((id) => (
-                  <li key={id} className={id === HUMAN_ID ? 'is-me' : undefined}>
-                    {displayName(id, t)}
+                  <li key={id} className={id === view.me ? 'is-me' : undefined}>
+                    {nameOf(id)}
                   </li>
                 ))}
               </ol>
             )}
-            <div className="dialog-actions">
-              <button type="button" className="btn btn-primary" onClick={onPlayAgain} autoFocus>
-                {t.playAgain}
-              </button>
-              <button type="button" className="btn" onClick={onSetup}>
-                {t.backToSetup}
-              </button>
-            </div>
+            {endActions}
           </div>
         </div>
       )}

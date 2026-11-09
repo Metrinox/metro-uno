@@ -1,6 +1,7 @@
 import type { LocalizedName } from '../data/network';
 import type { ActionType, WildType } from '../engine/cards';
 import type { RejectReason } from '../engine/game';
+import type { ErrorCode, LobbyRejectReason } from '../shared/protocol';
 
 export type Lang = 'en' | 'zh';
 export const LANGS: readonly Lang[] = ['en', 'zh'];
@@ -42,6 +43,8 @@ export interface Dict {
   playAgain: string;
   backToSetup: string;
   menu: string;
+  /** An online player whose connection has dropped. */
+  away: string;
   winner: (w: Who) => string;
   houseRules: string;
   galleryTitle: string;
@@ -84,6 +87,7 @@ export interface Dict {
   actionName: Record<ActionType, string>;
   wildName: Record<WildType, string>;
   rejected: Record<RejectReason, string>;
+  online: OnlineDict;
   ev: {
     played: (w: Who, card: string) => string;
     lineChanged: (line: string) => string;
@@ -97,6 +101,42 @@ export interface Dict {
     drawPending: (w: Who, n: number) => string;
     finished: (w: Who, place: number) => string;
   };
+}
+
+/** Strings for online play: the online menu, the lobby, and connection messages. */
+export interface OnlineDict {
+  playOnline: string;
+  menuTitle: string;
+  intro: string;
+  yourName: string;
+  createRoom: string;
+  orJoin: string;
+  roomCode: string;
+  join: string;
+  back: string;
+  nameRequired: string;
+  codeInvalid: string;
+  lobbyTitle: string;
+  shareLink: string;
+  copyLink: string;
+  copied: string;
+  seats: string;
+  emptySeat: string;
+  addComputer: string;
+  remove: string;
+  removeWho: (who: string) => string;
+  host: string;
+  rulesByHost: string;
+  needTwo: string;
+  waitingForHost: string;
+  waitingNextRound: string;
+  leaveRoom: string;
+  backToLobby: string;
+  connecting: string;
+  reconnecting: string;
+  unavailable: string;
+  errors: Record<ErrorCode, string>;
+  lobbyRejected: Record<LobbyRejectReason, string>;
 }
 
 function ordinal(n: number): string {
@@ -138,6 +178,7 @@ const en: Dict = {
   playAgain: 'Play again',
   backToSetup: 'Back to setup',
   menu: 'Setup',
+  away: 'away',
   winner: ({ who, you }) => (you ? 'You win!' : `${who} wins`),
   houseRules: 'House rules',
   galleryTitle: 'Card & line gallery',
@@ -192,6 +233,55 @@ const en: Dict = {
     'must-play-drawn-card': 'You must play the card you drew.',
     'cannot-play-together': 'Those cards can’t be played together.',
   },
+  online: {
+    playOnline: 'Play online',
+    menuTitle: 'Play online',
+    intro: 'Play with friends on their own phones or computers. Create a room and share the link, or join with a room code.',
+    yourName: 'Your name',
+    createRoom: 'Create room',
+    orJoin: 'Or join a room',
+    roomCode: 'Room code',
+    join: 'Join',
+    back: 'Back',
+    nameRequired: 'Enter your name first.',
+    codeInvalid: 'Room codes are 4 letters or digits.',
+    lobbyTitle: 'Room',
+    shareLink: 'Share this link with friends',
+    copyLink: 'Copy link',
+    copied: 'Copied',
+    seats: 'Seats',
+    emptySeat: 'Empty seat',
+    addComputer: 'Add computer',
+    remove: 'Remove',
+    removeWho: (who) => `Remove ${who}`,
+    host: 'Host',
+    rulesByHost: 'The host chooses the house rules.',
+    needTwo: 'At least 2 players are needed to start.',
+    waitingForHost: 'Waiting for the host to start the round.',
+    waitingNextRound: 'The host will start the next round.',
+    leaveRoom: 'Leave room',
+    backToLobby: 'Back to lobby',
+    connecting: 'Connecting…',
+    reconnecting: 'Connection lost. Reconnecting…',
+    unavailable: 'Online play is unavailable right now. You can still play against the computer.',
+    errors: {
+      'room-not-found': 'Room not found. Check the code and try again.',
+      'room-full': 'That room is full.',
+      'in-progress': 'A round is in progress in that room. Try again when it ends.',
+      kicked: 'The host removed you from the room.',
+      'bad-message': 'Something went wrong. Please try again.',
+      version: 'The game has been updated. Please reload the page.',
+      'session-expired': 'Your seat in that room is no longer available.',
+    },
+    lobbyRejected: {
+      'not-host': 'Only the host can do that.',
+      'not-in-lobby': 'That can only be done in the lobby.',
+      'not-enough-players': 'At least 2 players are needed to start.',
+      'seat-taken': 'That seat is taken.',
+      'seat-empty': 'That seat is already empty.',
+      'not-playing': 'No round is in progress.',
+    },
+  },
   ev: {
     played: ({ who }, card) => `${who} played ${card}`,
     lineChanged: (line) => `Now on the ${line}`,
@@ -240,6 +330,7 @@ const zh: Dict = {
   playAgain: '再玩一局',
   backToSetup: '返回設定',
   menu: '設定',
+  away: '離線',
   winner: ({ who, you }) => (you ? '你贏了！' : `${who}贏了`),
   houseRules: '自訂規則',
   galleryTitle: '卡牌及路綫一覽',
@@ -293,6 +384,55 @@ const zh: Dict = {
     'cannot-pass': '要先抽牌才可以過。',
     'must-play-drawn-card': '你必須出剛抽到的牌。',
     'cannot-play-together': '這些牌不能一起出。',
+  },
+  online: {
+    playOnline: '網上對戰',
+    menuTitle: '網上對戰',
+    intro: '和朋友用各自的手機或電腦一起玩。開設房間並分享連結，或輸入房間號碼加入。',
+    yourName: '你的名字',
+    createRoom: '開設房間',
+    orJoin: '或加入房間',
+    roomCode: '房間號碼',
+    join: '加入',
+    back: '返回',
+    nameRequired: '請先輸入你的名字。',
+    codeInvalid: '房間號碼是 4 個英文字母或數字。',
+    lobbyTitle: '房間',
+    shareLink: '把這個連結分享給朋友',
+    copyLink: '複製連結',
+    copied: '已複製',
+    seats: '座位',
+    emptySeat: '空位',
+    addComputer: '加入電腦',
+    remove: '移除',
+    removeWho: (who) => `移除${who}`,
+    host: '房主',
+    rulesByHost: '由房主設定房規。',
+    needTwo: '最少要有 2 位玩家才可以開始。',
+    waitingForHost: '等待房主開始這局。',
+    waitingNextRound: '房主會開始下一局。',
+    leaveRoom: '離開房間',
+    backToLobby: '返回房間',
+    connecting: '連線中…',
+    reconnecting: '連線中斷，正在重新連線…',
+    unavailable: '暫時無法網上對戰。你仍然可以和電腦玩。',
+    errors: {
+      'room-not-found': '找不到房間。請檢查號碼再試。',
+      'room-full': '房間已滿。',
+      'in-progress': '房間正在進行一局。請在這局結束後再試。',
+      kicked: '房主把你移出了房間。',
+      'bad-message': '出了問題，請再試一次。',
+      version: '遊戲已更新，請重新載入頁面。',
+      'session-expired': '你在該房間的座位已不再保留。',
+    },
+    lobbyRejected: {
+      'not-host': '只有房主可以這樣做。',
+      'not-in-lobby': '只可以在房間大廳這樣做。',
+      'not-enough-players': '最少要有 2 位玩家才可以開始。',
+      'seat-taken': '這個座位已有人。',
+      'seat-empty': '這個座位已經是空的。',
+      'not-playing': '目前沒有進行中的牌局。',
+    },
   },
   ev: {
     played: ({ who }, card) => `${who}出了${card}`,

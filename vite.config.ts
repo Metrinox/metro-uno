@@ -38,7 +38,9 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'server/**/*.test.ts'],
+    // Tests for the Workers runtime run under vitest.worker.config.ts.
+    exclude: ['**/node_modules/**', 'server/**/*.worker.test.ts'],
     environment: 'node',
   },
 });
