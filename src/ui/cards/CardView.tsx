@@ -3,8 +3,9 @@ import { cardLabel, stationName, textOn } from '../i18n/format';
 import { useLang } from '../i18n/LangContext';
 import { network } from '../common/network';
 import { OctopusLogo } from './OctopusLogo';
+import { TerminusIcon } from './TerminusIcon';
 
-const ACTION_ICON = { 'signal-fault': '⚠', terminus: '⇆', 'rush-hour': '+2' } as const;
+const ACTION_ICON = { 'signal-fault': '⚠', terminus: <TerminusIcon />, 'rush-hour': '+2' } as const;
 
 /** A line's colour band; merged lines show each label in its own colour. */
 function Band({ code }: { code: string }) {

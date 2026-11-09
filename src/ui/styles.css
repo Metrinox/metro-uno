@@ -702,6 +702,10 @@ button.card {
   font-size: 1.4rem;
   font-weight: 800;
 }
+.terminus-icon {
+  width: 1.6em;
+  height: 1.6em;
+}
 .card-name {
   font-size: 0.6rem;
   line-height: 1.1;
