@@ -671,6 +671,17 @@ button.card {
   padding: 3px 0;
   min-width: 0;
 }
+/* Merged-line bands use a smaller font; keep them as tall as single bands so
+   the number below sits at the same height on every station card. */
+.card-head > .card-band,
+.card-action > .card-band {
+  min-height: calc(0.68rem * 1.1 + 6px);
+}
+.card-head > .card-band .card-band-part,
+.card-action > .card-band .card-band-part {
+  display: grid;
+  place-items: center;
+}
 .card-band-part + .card-band-part {
   letter-spacing: 0;
 }
@@ -690,6 +701,7 @@ button.card {
 }
 .card-number {
   flex: 1;
+  min-height: 0;
   display: grid;
   place-items: center;
   font-size: 1.7rem;
@@ -697,19 +709,54 @@ button.card {
 }
 .card-icon {
   flex: 1;
+  min-height: 0;
   display: grid;
   place-items: center;
   font-size: 1.4rem;
   font-weight: 800;
 }
+/* Compromise: the name takes no layout space (so long names don't push the
+   number around), but the number/icon is centred as if one line of name were
+   reserved, lifting it off the bottom. Wild icons stay centred on the ring. */
+.card-number,
+.card:not(.card-wild) .card-icon {
+  padding-bottom: calc(0.6rem * 1.1 + 4px);
+}
 .card-svg-icon {
   width: 1.6em;
   height: 1.6em;
 }
+/* Band plus any transfer marker. The marker hangs below the band without
+   taking space, so it never pushes the number off centre. */
+.card-head {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+/* Interchange cards already stack a varying number of bands, and their marker
+   can wrap, so it stays in the flow there. */
+.card-station .card-head .card-transfer {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1;
+}
+/* The name sits over the bottom of the card and takes no space, so the number
+   or icon is centred in everything below the line band. */
 .card-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
   font-size: 0.6rem;
   line-height: 1.1;
   padding: 0 3px 4px;
+  display: flex;
+  justify-content: center;
+}
+.card-name-text {
   overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -720,11 +767,27 @@ button.card {
   .card-number {
     font-size: 2.4rem;
   }
+  .card-number,
+  .card:not(.card-wild) .card-icon {
+    padding-bottom: calc(0.72rem * 1.1 + 4px);
+  }
   .card-name {
     font-size: 0.72rem;
   }
   .card-band {
     font-size: 0.78rem;
+  }
+  .card-head > .card-band,
+  .card-action > .card-band {
+    min-height: calc(0.78rem * 1.1 + 6px);
+  }
+  /* Interchange icons are centred in a fixed box that starts below two bands
+     (the usual case), so a taller head — four bands, or a transfer marker —
+     no longer pushes the icon down. Mobile cards are too short for that
+     without the icon hitting the bands, so there it stays in the flow. */
+  .card-interchange .card-icon {
+    position: absolute;
+    inset: calc(2 * (0.6rem * 1.1 + 2px)) 0 0;
   }
 }
 .card-wild-ring {
@@ -734,8 +797,7 @@ button.card {
   opacity: 0.85;
   z-index: 0;
 }
-.card-wild .card-icon,
-.card-wild .card-name {
+.card-wild .card-icon {
   position: relative;
   z-index: 1;
 }
@@ -743,11 +805,12 @@ button.card {
   color: #fff;
   text-shadow: 0 1px 3px rgb(0 0 0 / 0.7);
 }
-.card-wild .card-name {
+/* The shadow pads the pill vertically without showing a clipped third line. */
+.card-wild .card-name-text {
   background: var(--surface);
-  margin: 0 4px 4px;
   border-radius: 4px;
-  padding: 2px;
+  padding: 0 4px;
+  box-shadow: 0 0 0 2px var(--surface);
 }
 
 /* Octopus wild card: grey card with the figure-8 logo. */
@@ -771,10 +834,15 @@ button.card {
   min-height: 0;
 }
 .card-wild.card-octopus .card-name {
+  position: static;
   color: #fff;
-  background: none;
   font-weight: 600;
   white-space: nowrap;
+}
+.card-wild.card-octopus .card-name-text {
+  background: none;
+  box-shadow: none;
+  padding: 0;
   overflow-wrap: normal;
 }
 
@@ -1015,12 +1083,28 @@ button.card {
   font-weight: 800;
   line-height: 1;
 }
-.card-transfer-line {
-  padding: 1px 2px;
+/* All transfer lines share one squircle, like a merged-line band, so they
+   read as one marker. */
+.card-transfer-lines {
+  display: inline-flex;
   border-radius: 3px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.card-transfer-line {
+  padding: 1px;
+}
+/* Central's three transfer lines barely fit: tighten the spacing so the arrow
+   and squircle share a row on wide screens, and shrink the text on phones so
+   the squircle at least fits the card (the arrow wraps above it there). */
+.card-interchange .card-transfer {
+  gap: 1px;
+  padding-inline: 1px;
+  font-size: 0.46rem;
 }
 @media (min-width: 720px) {
-  .card-transfer {
+  .card-transfer,
+  .card-interchange .card-transfer {
     font-size: 0.62rem;
   }
 }

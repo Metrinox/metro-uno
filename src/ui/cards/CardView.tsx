@@ -27,13 +27,24 @@ function TransferMarker({ lines }: { lines: string[] }) {
   return (
     <span className="card-transfer" data-testid="card-transfer">
       <span aria-hidden>⇢</span>
-      {lines.flatMap((code) =>
-        network.lineByCode[code]!.labels.map((l) => (
-          <span key={l.code} className="card-transfer-line" style={{ background: l.colour, color: textOn(l.colour) }}>
-            {l.code}
-          </span>
-        )),
-      )}
+      <span className="card-transfer-lines">
+        {lines.flatMap((code) =>
+          network.lineByCode[code]!.labels.map((l) => (
+            <span key={l.code} className="card-transfer-line" style={{ background: l.colour, color: textOn(l.colour) }}>
+              {l.code}
+            </span>
+          )),
+        )}
+      </span>
+    </span>
+  );
+}
+
+/** The card's name, kept in a fixed two-line box so the number above stays centred. */
+function Name({ children }: { children: string }) {
+  return (
+    <span className="card-name">
+      <span className="card-name-text">{children}</span>
     </span>
   );
 }
@@ -60,26 +71,30 @@ export function CardView({ card, size = 'hand', playable, highlight, onClick, te
     case 'station':
       body = (
         <>
-          <Band code={card.line} />
-          {card.transferLines && <TransferMarker lines={card.transferLines} />}
+          <span className="card-head">
+            <Band code={card.line} />
+            {card.transferLines && <TransferMarker lines={card.transferLines} />}
+          </span>
           <span className="card-number">{card.number}</span>
-          <span className="card-name">{stationName(network, card.stationId, lang)}</span>
+          <Name>{stationName(network, card.stationId, lang)}</Name>
         </>
       );
       break;
     case 'interchange':
       body = (
         <>
-          <span className="card-bands">
-            {card.lines.map((l) => (
-              <Band key={l} code={l} />
-            ))}
+          <span className="card-head">
+            <span className="card-bands">
+              {card.lines.map((l) => (
+                <Band key={l} code={l} />
+              ))}
+            </span>
+            {card.transferLines && <TransferMarker lines={card.transferLines} />}
           </span>
-          {card.transferLines && <TransferMarker lines={card.transferLines} />}
           <span className="card-icon" aria-hidden>
             ⇄
           </span>
-          <span className="card-name">{stationName(network, card.stationId, lang)}</span>
+          <Name>{stationName(network, card.stationId, lang)}</Name>
         </>
       );
       break;
@@ -90,7 +105,7 @@ export function CardView({ card, size = 'hand', playable, highlight, onClick, te
           <span className="card-icon" aria-hidden>
             {ACTION_ICON[card.action]}
           </span>
-          <span className="card-name">{t.actionName[card.action]}</span>
+          <Name>{t.actionName[card.action]}</Name>
         </>
       );
       break;
@@ -102,7 +117,7 @@ export function CardView({ card, size = 'hand', playable, highlight, onClick, te
               八達通
             </span>
             <OctopusLogo className="octopus-logo" />
-            <span className="card-name">{t.wildName.octopus}</span>
+            <Name>{t.wildName.octopus}</Name>
           </>
         );
         break;
@@ -114,7 +129,7 @@ export function CardView({ card, size = 'hand', playable, highlight, onClick, te
           <span className="card-icon" aria-hidden>
             +4
           </span>
-          <span className="card-name">{t.wildName[card.wild]}</span>
+          <Name>{t.wildName[card.wild]}</Name>
         </>
       );
       break;
