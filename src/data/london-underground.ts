@@ -26,7 +26,8 @@ import type { NetworkDef } from './network';
  * - The two Hammersmiths and the two Edgware Roads are separate stations, as TfL
  *   treats them. The Hammersmiths are joined by a walkway transfer, as are Bank
  *   and Monument. The Edgware Roads have no transfer.
- * - Northern: the Charing Cross branch is the trunk; the Bank branch is a loop
+ * - Northern: the trunk is Hampstead → Charing Cross branch → Kennington → Clapham
+ *   South (the Morden branch carries straight on); the Bank branch is a loop
  *   from Euston (where the two branches first meet going south from Camden
  *   Town) rejoining at Kennington.
  * - Each line is numbered from its north or west end within Zones 1–2.
@@ -224,12 +225,18 @@ export const londonUnderground: NetworkDef = {
         'west-ham',
       ],
       branches: [
-        { from: 'earls-court', stations: ['west-brompton', 'fulham-broadway', 'parsons-green', 'putney-bridge', 'east-putney'] },
+        // Drawn as on the map: the Wimbledon branch heads south-west (below, to the left),
+        // the Edgware Road branch north then east, and Olympia north-west.
+        {
+          from: 'earls-court',
+          stations: ['west-brompton', 'fulham-broadway', 'parsons-green', 'putney-bridge', 'east-putney'],
+          draw: { toward: 'left', side: 'below' },
+        },
         {
           from: 'earls-court',
           stations: ['high-street-kensington', 'notting-hill-gate', 'bayswater', 'paddington', 'edgware-road-circle'],
         },
-        { from: 'earls-court', stations: ['kensington-olympia'] },
+        { from: 'earls-court', stations: ['kensington-olympia'], draw: { toward: 'left' } },
       ],
     },
     {
@@ -246,15 +253,17 @@ export const londonUnderground: NetworkDef = {
       code: 'NOR',
       name: { en: 'Northern' },
       colour: '#000000',
-      // Trunk: Edgware branch end, then the Charing Cross branch to Kennington.
+      // Trunk: Edgware branch end, the Charing Cross branch to Kennington, then the
+      // Morden branch (cut at Clapham South), so it is drawn straight on from Kennington.
       trunk: [
         'hampstead', 'belsize-park', 'chalk-farm', 'camden-town', 'mornington-crescent', 'euston', 'warren-street',
         'goodge-street', 'tottenham-court-road', 'leicester-square', 'charing-cross', 'embankment', 'waterloo',
-        'kennington',
+        'kennington', 'oval', 'stockwell', 'clapham-north', 'clapham-common', 'clapham-south',
       ],
       branches: [
-        // High Barnet branch, cut at Archway.
-        { from: 'camden-town', stations: ['kentish-town', 'tufnell-park', 'archway'] },
+        // High Barnet branch, cut at Archway. Drawn heading north (left) beside the
+        // Edgware branch end of the trunk, as both leave Camden Town northwards.
+        { from: 'camden-town', stations: ['kentish-town', 'tufnell-park', 'archway'], draw: { toward: 'left' } },
         // Bank branch: a loop rejoining at Kennington.
         {
           from: 'euston',
@@ -264,8 +273,6 @@ export const londonUnderground: NetworkDef = {
             'elephant-and-castle',
           ],
         },
-        // Morden branch, cut at Clapham South.
-        { from: 'kennington', stations: ['oval', 'stockwell', 'clapham-north', 'clapham-common', 'clapham-south'] },
         { from: 'kennington', stations: ['nine-elms', 'battersea-power-station'] },
       ],
     },
@@ -336,7 +343,8 @@ export const londonUnderground: NetworkDef = {
       ],
       branches: [
         // Metropolitan, non-stop from Baker Street to Finchley Road.
-        { from: 'baker-street', stations: ['finchley-road'] },
+        // Metropolitan to Finchley Road, drawn heading north-west (left) as on the map.
+        { from: 'baker-street', stations: ['finchley-road'], draw: { toward: 'left' } },
         // Circle's southern half: a loop from Liverpool Street rejoining at Paddington.
         {
           from: 'liverpool-street',
@@ -346,6 +354,9 @@ export const londonUnderground: NetworkDef = {
             'embankment', 'westminster', 'st-jamess-park', 'victoria', 'sloane-square', 'south-kensington',
             'gloucester-road', 'high-street-kensington', 'notting-hill-gate', 'bayswater',
           ],
+          // Drawn as on the map: the Circle's southern side runs below the trunk,
+          // heading back west (left) to Paddington, closing the ring.
+          draw: { toward: 'left', side: 'below' },
         },
       ],
     },

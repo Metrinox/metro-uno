@@ -45,25 +45,31 @@ export function LineStrip({ line, highlightStation }: { line: string; highlightS
   const layout = useMemo(() => layoutLine(def), [def]);
   const scroller = useRef<HTMLDivElement>(null);
 
-  // Trunk names go below the dots; branch names above, so diagonal tracks never cross text.
-  // A branch row with another row's stations at or next to its columns directly above it
-  // gets extra height, so its names fit between the two rows (e.g. the District's
-  // Wimbledon branch under its Edgware Road branch).
+  // Names on the trunk and rows below it go under the dots; names on rows above go over
+  // them, so diagonal tracks never cross text. Two neighbouring rows with stations at or
+  // next to the same columns get extra height between them, so the names between them fit
+  // (e.g. the Northern's Clapham branch under its Battersea branch).
   const rowY = useMemo(() => {
     const cols = (row: number) => layout.stops.filter((st) => st.row === row).map((st) => st.col);
+    const near = (a: number[], b: number[]) => a.some((c) => b.some((d) => Math.abs(c - d) <= 1));
     const offset = new Map<number, number>([[0, 0]]);
+    // Rows above the trunk: names sit over each row, between it and the row above.
     for (let row = 0; row > layout.minRow; row--) {
-      const above = cols(row - 1);
-      const crowded = row < 0 && cols(row).some((c) => above.some((a) => Math.abs(a - c) <= 1));
-      offset.set(row - 1, offset.get(row)! + ROW_H + (crowded ? LABEL_H : 0));
+      const crowded = row < 0 && near(cols(row), cols(row - 1));
+      offset.set(row - 1, offset.get(row)! - ROW_H - (crowded ? LABEL_H : 0));
+    }
+    // Rows below the trunk: names sit under each row, between it and the row below.
+    for (let row = 0; row < layout.maxRow; row++) {
+      const crowded = near(cols(row), cols(row + 1));
+      offset.set(row + 1, offset.get(row)! + ROW_H + (crowded ? LABEL_H : 0));
     }
     // Row 0 (the trunk) sits low enough to leave room for branch rows and their names above.
-    const trunkY = offset.get(layout.minRow)! + (layout.minRow < 0 ? DOT_R + 30 : DOT_R + 6);
-    return (row: number) => trunkY - offset.get(row)!;
+    const trunkY = -offset.get(layout.minRow)! + (layout.minRow < 0 ? DOT_R + 30 : DOT_R + 6);
+    return (row: number) => trunkY + offset.get(row)!;
   }, [layout]);
   const x = (col: number) => PAD_X + col * COL_W;
   const width = x(layout.cols - 1) + PAD_X;
-  const height = rowY(0) + DOT_R + 30;
+  const height = rowY(layout.maxRow) + DOT_R + 30;
   const where = useMemo(
     () => new Map(layout.stops.map((s) => [s.stationId, { x: PAD_X + s.col * COL_W, y: rowY(s.row) }])),
     [layout, rowY],

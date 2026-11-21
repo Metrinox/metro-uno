@@ -19,6 +19,14 @@ export interface BranchDef {
   to?: string;
   /** Branch stations in order, not including `from`. */
   stations: string[];
+  /** How the line strip draws this branch. Display only; defaults to `{ toward: 'right', side: 'above' }`. */
+  draw?: BranchDraw;
+}
+
+/** Which way a branch heads from its fork in the line strip, and which side of the trunk it sits on. */
+export interface BranchDraw {
+  toward?: 'left' | 'right';
+  side?: 'above' | 'below';
 }
 
 /** One display label for a line: a short code in its own colour. */
@@ -105,6 +113,8 @@ export interface Line {
   branchFrom: (string | null)[];
   /** Where each branch rejoins the line (loops only), aligned with `branchFrom`. */
   branchTo: (string | null)[];
+  /** How each branch is drawn, aligned with `branchFrom` (index 0 unused). */
+  branchDraw: Required<BranchDraw>[];
 }
 
 export interface Station {
@@ -151,6 +161,7 @@ export function loadNetwork(def: NetworkDef): Network {
     const segments: string[][] = [line.trunk, ...(line.branches ?? []).map((b) => b.stations)];
     const branchFrom: (string | null)[] = [null];
     const branchTo: (string | null)[] = [null];
+    const branchDraw: Required<BranchDraw>[] = [{ toward: 'right', side: 'above' }];
 
     const addStation = (id: string) => {
       if (!(id in def.stations)) {
@@ -174,6 +185,7 @@ export function loadNetwork(def: NetworkDef): Network {
       branch.stations.forEach(addStation);
       branchFrom.push(branch.from);
       branchTo.push(branch.to ?? null);
+      branchDraw.push({ toward: branch.draw?.toward ?? 'right', side: branch.draw?.side ?? 'above' });
     }
     for (const to of branchTo) {
       if (to === null) continue;
@@ -182,13 +194,13 @@ export function loadNetwork(def: NetworkDef): Network {
     (line.branches ?? []).forEach((b) => {
       if (b.to === b.from) throw new NetworkError(`Line ${line.code} has a branch that rejoins where it starts ("${b.from}")`);
     });
-    return { line, segments, branchFrom, branchTo };
+    return { line, segments, branchFrom, branchTo, branchDraw };
   });
 
   const isInterchange = (id: string) => (membership[id]?.length ?? 0) >= 2;
 
   // Pass 2: number stops. Interchanges are skipped; the count runs on across branches.
-  const lines: Line[] = routes.map(({ line, segments, branchFrom, branchTo }) => {
+  const lines: Line[] = routes.map(({ line, segments, branchFrom, branchTo, branchDraw }) => {
     let next = 1;
     const stops: LineStop[] = [];
     segments.forEach((segment, branch) => {
@@ -203,7 +215,7 @@ export function loadNetwork(def: NetworkDef): Network {
         if (!onLine.has(id)) throw new NetworkError(`Label ${label.code} on line ${line.code} covers "${id}", which is not on that line`);
       }
     }
-    return { code: line.code, name: line.name, colour: line.colour, labels, stops, branchFrom, branchTo };
+    return { code: line.code, name: line.name, colour: line.colour, labels, stops, branchFrom, branchTo, branchDraw };
   });
 
   const lineByCode: Record<string, Line> = {};
