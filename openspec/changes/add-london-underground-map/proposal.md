@@ -2,7 +2,7 @@
 
 ## Why
 
-The game plays on one map: Hong Kong MTR is hard-coded on both the browser and the server. The network format was built so a city could be added as data. London's Underground, cut down to Zones 1–2, is a familiar second map that keeps the deck about the size of Hong Kong's, so a round plays at the same pace.
+The game plays on one map: Hong Kong MTR is hard-coded on both the browser and the server. The network format was built so a city could be added as data. London's Underground, cut down to Zones 1–2, is a familiar second map. Its deck is larger than Hong Kong's (168 cards against 130), so a round runs a little longer.
 
 ## What Changes
 
@@ -11,6 +11,7 @@ The game plays on one map: Hong Kong MTR is hard-coded on both the browser and t
   - The three are merged because each of them alone would have few or no numbered stations in Zones 1–2. The merge follows the precedent of Hong Kong's TCL · DRL · AEL.
   - Waterloo & City is left out. Both of its stations are interchanges, so it would have no numbered cards.
   - Walkway transfers join Hammersmith (H&C/Circle) ↔ Hammersmith (District/Piccadilly) and Bank ↔ Monument.
+  - West Ham (Zone 2/3) is included, so the District and merged lines run to it. Kensington (Olympia) is kept on the District although its service there is part-time.
 - Make **Chinese names optional** in network data. A station or line without one shows its English name when the interface is in Chinese. London has no Chinese names.
 - Give each network **its own wild-card theme** (names and artwork). Hong Kong keeps Octopus and Typhoon Signal No. 8. London gets Oyster (wild) and Tube Strike (wild + draw 4). The rules are unchanged.
 - Let players **choose the map**:
@@ -36,8 +37,12 @@ None. Choosing a map changes existing screens and rooms, and is specified with t
 
 ## Impact
 
-- **Data:** new `src/data/london-underground.ts` and tests. `src/data/network.ts` gets optional `zh`, a wild theme, and a network registry.
+- **Data:** new `src/data/london-underground.ts` and tests. `src/data/network.ts` gets optional `zh` and a wild theme. New `src/data/networks.ts` lists the available networks.
 - **Engine:** no rule changes. `createGame` already takes a network.
-- **UI:** every component that imports the module-level `network` (`CardView`, `LineStrip`, `LineBadge`, `GameScreen`, `Setup`, `GalleryPage`, `useLocalGame`) switches to reading the round's network from context. New wild-card artwork for London.
-- **Server and protocol:** `RoomState`, `RoomSnapshot` and the client messages gain a map id. `server/network.ts` resolves the network per room. Stored rooms without a map id read as Hong Kong.
-- **Translations:** map names, London wild names, and a map-picker label in English and Traditional Chinese.
+- **UI:**
+  - Components that imported the module-level `network` (`CardView`, `LineStrip`, `LineBadge`, `GameScreen`, `GalleryPage`, `useLocalGame`) read the round's network from context. `Setup` uses its own map choice.
+  - New wild-card artwork for London.
+  - The line strip gives stacked branch rows room for their names and uses wider columns.
+  - Crowded interchange cards are tightened on phone-size cards.
+- **Server and protocol:** `RoomState`, `RoomSnapshot` and the client messages gain a map id. `server/network.ts` is deleted; rooms look up their network in `src/data/networks.ts`. Stored rooms without a map id read as Hong Kong.
+- **Translations:** a "Map" label and an "unknown map" rejection message in English and Traditional Chinese. The fixed `subtitle` and the `wildName` entries are removed: map names and wild-card names come from the network data.

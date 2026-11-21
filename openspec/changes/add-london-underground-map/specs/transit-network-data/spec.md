@@ -21,7 +21,7 @@ The London network SHALL contain exactly these lines: Bakerloo, Central, Distric
 - **THEN** it contains exactly the 8 lines listed above, and none of them is Waterloo & City, Overground, Elizabeth line, DLR, or tram
 
 ### Requirement: London stations limited to Zones 1 and 2
-The London network SHALL contain exactly the stations that are in fare Zone 1 or Zone 2, including stations on a Zone 2/3 boundary, and are served by an included line. A station counts as served by a line only if that line's trains stop there in regular service. Services and lines that are left out SHALL NOT make a station an interchange.
+The London network SHALL contain exactly the stations that are in fare Zone 1 or Zone 2, including stations on a Zone 2/3 boundary, and are served by an included line. A station counts as served by a line only if that line's trains stop there in regular service, except that Kensington (Olympia) SHALL be included on the District line although its District service is part-time. Services and lines that are left out SHALL NOT make a station an interchange.
 
 #### Scenario: Outer stations left out
 - **WHEN** the London network is loaded
@@ -38,6 +38,14 @@ The London network SHALL contain exactly the stations that are in fare Zone 1 or
 #### Scenario: Peak-only stop ignored
 - **WHEN** Turnham Green is inspected
 - **THEN** it is a single-line District station with a number, although Piccadilly trains stop there early and late
+
+#### Scenario: Kensington (Olympia) kept
+- **WHEN** Kensington (Olympia) is inspected
+- **THEN** it is a single-line District station with a number
+
+#### Scenario: West Ham
+- **WHEN** West Ham is inspected
+- **THEN** it is an interchange of the District, Jubilee, and merged lines
 
 ### Requirement: Circle, Hammersmith & City, and Metropolitan merged
 The Circle, Hammersmith & City, and Metropolitan lines SHALL be one line for matching, labelled CIR, H&C, and MET, each in its own official colour. Each label SHALL cover the stations its service runs through within Zones 1–2. No separate Circle, Hammersmith & City, or Metropolitan line SHALL exist.
