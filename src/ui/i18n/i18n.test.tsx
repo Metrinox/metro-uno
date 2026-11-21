@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { act, render, screen } from '@testing-library/react';
-import { dictionaries, loadLang, saveLang } from './i18n';
+import { dictionaries, loadLang, localName, saveLang } from './i18n';
+import { cardLabel, cardName, lineName, stationName } from './format';
+import { loadNetwork } from '../../data/network';
+import { networkOrDefault } from '../../data/networks';
+import type { Card } from '../../engine/cards';
 import { LangProvider, useLang } from './LangContext';
 
 function Probe() {
@@ -19,6 +23,31 @@ const blocked = () => {
 
 describe('i18n', () => {
   beforeEach(() => localStorage.clear());
+
+  it('shows the English name in Chinese mode when there is no Chinese name', () => {
+    expect(localName({ en: 'Royal Oak' }, 'zh')).toBe('Royal Oak');
+    expect(localName({ en: 'Central', zh: '中環' }, 'zh')).toBe('中環');
+    const net = loadNetwork({
+      id: 'en-only',
+      name: { en: 'English only' },
+      stations: { a: { en: 'Alpha' }, b: { en: 'Beta' } },
+      lines: [{ code: 'L', name: { en: 'Line' }, colour: '#123456', trunk: ['a', 'b'] }],
+      wilds: { wild: { name: { en: 'W' }, art: 'ring' }, draw4: { name: { en: 'D' }, art: 'ring' } },
+    });
+    expect(stationName(net, 'a', 'zh')).toBe('Alpha');
+    expect(lineName(net, 'L', 'zh')).toBe('Line');
+  });
+
+  it('names wild cards from the network theme in both languages', () => {
+    const hk = networkOrDefault('hk-mtr');
+    const octopus: Card = { id: 'wild:octopus:1', kind: 'wild', wild: 'octopus' };
+    const typhoon: Card = { id: 'wild:typhoon:1', kind: 'wild', wild: 'typhoon' };
+    expect(cardName(octopus, hk, 'en', dictionaries.en)).toBe('Octopus');
+    expect(cardLabel(typhoon, hk, 'en', dictionaries.en)).toBe('Typhoon Signal No. 8');
+    expect(cardName(octopus, hk, 'zh', dictionaries.zh)).toBe('八達通');
+    expect(cardLabel(typhoon, hk, 'zh', dictionaries.zh)).toBe('八號風球');
+    expect('wildName' in dictionaries.en).toBe(false);
+  });
 
   it('has the same keys in both dictionaries', () => {
     const keys = (o: object): string[] =>

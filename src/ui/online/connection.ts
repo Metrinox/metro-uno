@@ -6,6 +6,7 @@
  * reconnects with backoff when the connection drops.
  */
 import type { HouseRules } from '../../engine/game';
+import { loadMap } from '../common/settings';
 import {
   parseServerMessage,
   PING_TEXT,
@@ -23,7 +24,8 @@ export const BACKOFF_MS = [500, 1000, 2000, 5000];
 export type ConnectionStatus = 'connecting' | 'open' | 'reconnecting' | 'unavailable' | 'closed';
 
 export type Target =
-  | { kind: 'create'; name: string; rules: HouseRules }
+  /** `map` defaults to the map last chosen on the setup screen. */
+  | { kind: 'create'; name: string; rules: HouseRules; map?: string }
   | { kind: 'join'; code: string; name: string }
   | { kind: 'resume'; session: StoredSession };
 
@@ -163,7 +165,10 @@ export class OnlineConnection {
       socket.send(JSON.stringify({ type: 'hello', protocol: PROTOCOL_VERSION, ...(this.session ? { session: this.session.session } : {}) }));
       if (!this.session) {
         const t = this.opts.target;
-        if (t.kind === 'create') socket.send(JSON.stringify({ type: 'createRoom', name: t.name, rules: t.rules }));
+        if (t.kind === 'create') {
+          const map = t.map ?? loadMap(this.storage);
+          socket.send(JSON.stringify({ type: 'createRoom', name: t.name, rules: t.rules, map } satisfies ClientMessage));
+        }
         if (t.kind === 'join') socket.send(JSON.stringify({ type: 'joinRoom', name: t.name }));
       }
       this.startHeartbeat();

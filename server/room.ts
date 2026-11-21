@@ -18,7 +18,9 @@ import {
   type GameState,
   type HouseRules,
 } from '../src/engine/game';
+import { DEFAULT_NETWORK_ID, networkOrDefault } from '../src/data/networks';
 import {
+  isKnownMap,
   PROTOCOL_VERSION,
   ROOM_SEATS,
   type ClientMessage,
@@ -30,7 +32,6 @@ import {
   type ServerMessage,
 } from '../src/shared/protocol';
 import { sanitizeName, uniqueName } from '../src/shared/rooms';
-import { network } from './network';
 
 export const HOST_HANDOVER_MS = 30_000;
 export const EMPTY_ROOM_MS = 5 * 60_000;
@@ -70,6 +71,8 @@ export interface RoomState {
   open: boolean;
   phase: RoomPhase;
   rules: HouseRules;
+  /** The id of the map rounds are played on. Rooms stored before maps existed read as Hong Kong. */
+  map: string;
   hostSeat: string | null;
   seats: (Seat | null)[];
   game: GameState | null;
@@ -127,6 +130,7 @@ export function freshState(code: string, now: number, rules: HouseRules = normal
     open: true,
     phase: 'lobby',
     rules,
+    map: DEFAULT_NETWORK_ID,
     hostSeat: null,
     seats: Array.from({ length: ROOM_SEATS }, () => null),
     game: null,
@@ -223,7 +227,7 @@ export class Room {
   /** Changes to this key are what members need to hear about in a `room` message. */
   private roomKey(): string {
     const s = this.state;
-    return JSON.stringify([s.open, s.phase, s.rules, s.hostSeat, this.seatSnapshots()]);
+    return JSON.stringify([s.open, s.phase, s.rules, s.map, s.hostSeat, this.seatSnapshots()]);
   }
 
   private send(to: string, msg: ServerMessage) {
@@ -281,7 +285,7 @@ export class Room {
 
     switch (msg.type) {
       case 'createRoom':
-        return this.create(conn, msg.name, msg.rules, ctx);
+        return this.create(conn, msg.name, msg.rules, msg.map, ctx);
       case 'joinRoom':
         return this.join(conn, msg.name, ctx);
       case 'leave':
@@ -303,11 +307,13 @@ export class Room {
     this.sendTable(conn, []);
   }
 
-  private create(conn: Conn, rawName: string, rules: Partial<HouseRules>, ctx: MessageContext) {
+  private create(conn: Conn, rawName: string, rules: Partial<HouseRules>, map: string | undefined, ctx: MessageContext) {
     const name = sanitizeName(rawName);
     if (!name || !ctx.newSession || conn.seat) return this.send(conn.id, { type: 'error', code: 'bad-message' });
     if (this.seats().length > 0) return this.refuse(conn.id, 'room-not-found');
+    if (map !== undefined && !isKnownMap(map)) return this.reject(conn.id, 'unknown-map');
     this.state.rules = normalizeRules(rules);
+    this.state.map = map ?? DEFAULT_NETWORK_ID;
     this.state.seats[0] = this.newHuman(0, name, ctx.newSession.hash, ctx.now);
     this.state.hostSeat = seatId(0);
     this.welcome(conn, seatId(0), ctx.newSession.token);
@@ -377,6 +383,11 @@ export class Room {
         if (this.state.phase !== 'lobby') return this.reject(conn.id, 'not-in-lobby');
         this.state.rules = normalizeRules({ ...this.state.rules, ...msg.rules });
         return;
+      case 'setMap':
+        if (this.state.phase !== 'lobby') return this.reject(conn.id, 'not-in-lobby');
+        if (!isKnownMap(msg.map)) return this.reject(conn.id, 'unknown-map');
+        this.state.map = msg.map;
+        return;
       case 'addBot': {
         if (this.state.phase !== 'lobby') return this.reject(conn.id, 'not-in-lobby');
         if (this.state.seats[msg.seat] !== null) return this.reject(conn.id, 'seat-taken');
@@ -439,7 +450,7 @@ export class Room {
     this.state.moves = 0;
     const seed = this.deps.seedPrefix ? `${this.deps.seedPrefix}-${this.state.round}` : this.deps.randomSeed();
     this.state.game = createGame({
-      network,
+      network: networkOrDefault(this.state.map),
       players: seats.map((s) => ({ id: s.id, name: s.kind === 'bot' ? `Computer ${s.botNumber}` : s.name, isHuman: s.kind === 'human' })),
       seed,
       rules: this.state.rules,
@@ -580,6 +591,7 @@ export class Room {
       code: this.state.code,
       phase: this.state.phase,
       rules: this.state.rules,
+      map: this.state.map,
       hostSeat: this.state.hostSeat ?? '',
       seats: this.seatSnapshots(),
       you: seat,

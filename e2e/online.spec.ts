@@ -1,4 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
+import { networkById } from '../src/data/networks';
+import { buildDeck } from '../src/engine/cards';
+
+const LONDON = 'london-underground';
+const london = networkById(LONDON)!;
+const londonDeck = new Set(buildDeck(london).map((c) => c.id));
+const hongKongDeck = new Set(buildDeck(networkById('hk-mtr')!).map((c) => c.id));
 
 /** Card labels in the hand, in order. */
 const handCards = (page: Page) => page.getByTestId('hand').locator('.card').allTextContents();
@@ -93,4 +100,79 @@ test('the lobby fits a phone screen', async ({ page }) => {
     await page.getByTestId(id).scrollIntoViewIfNeeded();
     await expect(page.getByTestId(id)).toBeInViewport();
   }
+});
+
+/** Checks that the hand and line strip on `page` come from the London map. */
+async function expectLondonTable(page: Page) {
+  await expect(page.getByTestId('hand').locator('.card')).toHaveCount(7);
+  const cards = await page
+    .getByTestId('hand')
+    .locator('[data-card]')
+    .evaluateAll((els) => els.map((e) => e.getAttribute('data-card')!));
+  expect(cards.every((id) => londonDeck.has(id))).toBe(true);
+  // At least one card exists only in the London deck (shared ids are wilds and same-named actions).
+  expect(cards.some((id) => !hongKongDeck.has(id)) || cards.every((id) => id.startsWith('wild:'))).toBe(true);
+  const stops = await page
+    .getByTestId('line-strip')
+    .locator('[data-station]')
+    .evaluateAll((els) => els.map((e) => e.getAttribute('data-station')!));
+  expect(stops.length).toBeGreaterThan(0);
+  expect(stops.every((id) => id in london.stations)).toBe(true);
+}
+
+test('the host plays a round on the London map', async ({ browser }) => {
+  const hostContext = await browser.newContext();
+  const guestContext = await browser.newContext();
+  const host = await hostContext.newPage();
+  const guest = await guestContext.newPage();
+
+  await host.goto('/');
+  await host.getByTestId('play-online').click();
+  await host.getByTestId('online-name').fill('Mei');
+  await host.getByTestId('create-room').click();
+  await expect(host.getByTestId('lobby-map-name')).toHaveText(networkById('hk-mtr')!.name.en);
+  const link = await host.getByTestId('share-link').inputValue();
+
+  await guest.goto(link);
+  await guest.getByTestId('online-name').fill('Ka Ho');
+  await guest.getByTestId('join-room').click();
+  await expect(host.getByTestId('seat-1')).toContainText('Ka Ho');
+  // Only the host gets the map picker.
+  await expect(guest.getByTestId('lobby-map-picker')).toHaveCount(0);
+
+  // The host picks London; the guest's lobby follows.
+  await host.getByTestId(`lobby-map-${LONDON}`).click();
+  await expect(host.getByTestId('lobby-map-name')).toHaveText(london.name.en);
+  await expect(guest.getByTestId('lobby-map-name')).toHaveText(london.name.en);
+
+  await host.getByTestId('start-online').click();
+  await expectLondonTable(host);
+  await expectLondonTable(guest);
+
+  // A reload returns the guest to the London table.
+  const before = await guest
+    .getByTestId('hand')
+    .locator('[data-card]')
+    .evaluateAll((els) => els.map((e) => e.getAttribute('data-card')));
+  await guest.reload();
+  await expectLondonTable(guest);
+  expect(
+    await guest
+      .getByTestId('hand')
+      .locator('[data-card]')
+      .evaluateAll((els) => els.map((e) => e.getAttribute('data-card'))),
+  ).toEqual(before);
+
+  await hostContext.close();
+  await guestContext.close();
+});
+
+test('a room starts on the map chosen on the setup screen', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId(`map-${LONDON}`).click();
+  await page.getByTestId('play-online').click();
+  await page.getByTestId('online-name').fill('Mei');
+  await page.getByTestId('create-room').click();
+  await expect(page.getByTestId('lobby-map-name')).toHaveText(london.name.en);
+  await expect(page.getByTestId(`lobby-map-${LONDON}`)).toHaveClass(/is-selected/);
 });

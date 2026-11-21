@@ -178,6 +178,9 @@ legend {
   border-radius: var(--radius);
   cursor: pointer;
   font-weight: 600;
+  /* Long names (e.g. "London Underground") wrap onto two centred lines. */
+  text-align: center;
+  padding: 4px 6px;
 }
 .segmented label.is-selected {
   border-color: var(--accent);
@@ -814,7 +817,7 @@ button.card {
 }
 
 /* Octopus wild card: grey card with the figure-8 logo. */
-.card-octopus {
+.card-art-octopus {
   background: #646567;
   border-color: #4f5052;
   color: #fff;
@@ -833,17 +836,33 @@ button.card {
   flex: 1;
   min-height: 0;
 }
-.card-wild.card-octopus .card-name {
+.card-wild.card-art-octopus .card-name,
+.card-wild.card-art-oyster .card-name {
   position: static;
   color: #fff;
   font-weight: 600;
   white-space: nowrap;
 }
-.card-wild.card-octopus .card-name-text {
+.card-wild.card-art-octopus .card-name-text,
+.card-wild.card-art-oyster .card-name-text {
   background: none;
   box-shadow: none;
   padding: 0;
   overflow-wrap: normal;
+}
+
+/* Oyster wild card: blue card with an original white wave mark (no TfL logo). */
+.card-art-oyster {
+  background: #1c3f94;
+  border-color: #142e6e;
+  color: #fff;
+  justify-content: space-between;
+}
+.oyster-art {
+  width: 80%;
+  align-self: center;
+  flex: 1;
+  min-height: 0;
 }
 
 /* ---------- Dialogs ---------- */
@@ -1101,6 +1120,36 @@ button.card {
   gap: 1px;
   padding-inline: 1px;
   font-size: 0.46rem;
+}
+/* Phone-size cards are only 88px tall. Interchanges with four bands (e.g. King's
+   Cross St Pancras) or a transfer marker (e.g. Hammersmith) would leave the ⇄
+   touching the name, so their bands and marker sit tighter there. */
+@media (max-width: 719px) {
+  .card-bands:has(> .card-band:nth-child(4)) .card-band-part {
+    padding: 0;
+  }
+  .card-interchange:has(.card-band:nth-child(4)) .card-icon,
+  .card-interchange:has(.card-transfer) .card-icon {
+    font-size: 1rem;
+  }
+  /* Interchange icons aren't aligned on phones anyway, so the name takes real space
+     there and the ⇄ centres in what is left, never under a two-line name. */
+  .card-interchange .card-name {
+    position: static;
+  }
+  .card-interchange .card-icon {
+    padding-bottom: 0;
+  }
+  /* Three labels in a band (e.g. CIR · H&C · MET) don't fit at the band's usual size. */
+  .card-bands .card-band:has(.card-band-part + .card-band-part + .card-band-part),
+  .card-head > .card-band:has(.card-band-part + .card-band-part + .card-band-part),
+  .card-action > .card-band:has(.card-band-part + .card-band-part + .card-band-part) {
+    font-size: 0.48rem;
+    letter-spacing: 0;
+  }
+  .card-interchange .card-transfer {
+    padding-top: 1px;
+  }
 }
 @media (min-width: 720px) {
   .card-transfer,

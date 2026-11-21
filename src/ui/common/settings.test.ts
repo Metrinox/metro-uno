@@ -1,5 +1,5 @@
 import { DEFAULT_RULES } from '../../engine/game';
-import { loadRules, saveRules } from './settings';
+import { loadMap, loadRules, saveMap, saveRules } from './settings';
 
 function memoryStorage(): Storage {
   const m = new Map<string, string>();
@@ -44,5 +44,28 @@ describe('house rules storage', () => {
     const store = memoryStorage();
     store.setItem('metro-uno.rules', JSON.stringify({ handSize: 500 }));
     expect(loadRules(() => store).handSize).toBe(15);
+  });
+});
+
+describe('map storage', () => {
+  it('defaults to Hong Kong when nothing is saved', () => {
+    expect(loadMap(() => memoryStorage())).toBe('hk-mtr');
+  });
+
+  it('remembers the chosen map', () => {
+    const store = memoryStorage();
+    saveMap('london-underground', () => store);
+    expect(loadMap(() => store)).toBe('london-underground');
+  });
+
+  it('falls back to Hong Kong for an unknown map', () => {
+    const store = memoryStorage();
+    saveMap('atlantis', () => store);
+    expect(loadMap(() => store)).toBe('hk-mtr');
+  });
+
+  it('survives storage that throws', () => {
+    expect(loadMap(blocked)).toBe('hk-mtr');
+    expect(() => saveMap('london-underground', blocked)).not.toThrow();
   });
 });

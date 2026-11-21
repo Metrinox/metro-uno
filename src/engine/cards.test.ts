@@ -1,4 +1,5 @@
 import { hongKongMtr } from '../data/hk-mtr';
+import { londonUnderground } from '../data/london-underground';
 import { loadNetwork } from '../data/network';
 import { tinyDef } from '../data/tiny-network';
 import { buildDeck, type Card } from './cards';
@@ -70,5 +71,59 @@ describe('buildDeck (other networks)', () => {
     const tiny = buildDeck(loadNetwork(tinyDef));
     expect(tiny.filter((c) => c.kind === 'interchange')).toHaveLength(1);
     expect(tiny).toHaveLength(6 + 2 * 3 + 8);
+  });
+});
+
+describe('buildDeck (London Underground)', () => {
+  const lu = loadNetwork(londonUnderground);
+  const luDeck = buildDeck(lu);
+  const s = Object.keys(lu.stations).length;
+
+  it('has S station cards, one per station', () => {
+    const stationCards = luDeck.filter((c) => c.kind === 'station' || c.kind === 'interchange');
+    expect(stationCards).toHaveLength(s);
+    expect(new Set(stationCards.map((c) => ('stationId' in c ? c.stationId : ''))).size).toBe(s);
+  });
+
+  it('has 24 action cards, one of each action per line', () => {
+    const actions = luDeck.filter((c) => c.kind === 'action');
+    expect(lu.lines).toHaveLength(8);
+    expect(actions).toHaveLength(24);
+    for (const line of lu.lines) {
+      for (const a of ['signal-fault', 'terminus', 'rush-hour']) {
+        expect(actions.filter((c) => c.kind === 'action' && c.line === line.code && c.action === a)).toHaveLength(1);
+      }
+    }
+  });
+
+  it('has 4 Oyster and 4 Tube Strike cards, with the same engine roles as Hong Kong', () => {
+    const wilds = luDeck.filter((c) => c.kind === 'wild');
+    expect(wilds.filter((c) => c.kind === 'wild' && c.wild === 'octopus')).toHaveLength(4);
+    expect(wilds.filter((c) => c.kind === 'wild' && c.wild === 'typhoon')).toHaveLength(4);
+    expect(wilds).toEqual(byKind('wild'));
+    expect([lu.wilds.wild.name.en, lu.wilds.draw4.name.en]).toEqual(['Oyster', 'Tube Strike']);
+  });
+
+  it('totals S + 24 + 8 cards with unique ids', () => {
+    expect(luDeck).toHaveLength(s + 24 + 8);
+    expect(new Set(luDeck.map((c) => c.id)).size).toBe(luDeck.length);
+  });
+
+  it('gives transfer cards their transfer lines (Hammersmith, Bank)', () => {
+    expect(luDeck.find((c) => c.id === 'st:hammersmith-hc')).toEqual({
+      id: 'st:hammersmith-hc',
+      kind: 'station',
+      stationId: 'hammersmith-hc',
+      line: 'SSR',
+      number: 1,
+      transferLines: ['DIS', 'PIC'],
+    });
+    expect(luDeck.find((c) => c.id === 'st:bank')).toEqual({
+      id: 'st:bank',
+      kind: 'interchange',
+      stationId: 'bank',
+      lines: ['CEN', 'NOR'],
+      transferLines: ['DIS', 'SSR'],
+    });
   });
 });

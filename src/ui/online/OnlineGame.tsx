@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
+import { networkOrDefault } from '../../data/networks';
 import type { HouseRules } from '../../engine/game';
 import type { ErrorCode } from '../../shared/protocol';
 import { GameScreen } from '../game/GameScreen';
 import { useLang } from '../i18n/LangContext';
+import { NetworkProvider } from '../common/NetworkContext';
 import { saveRules } from '../common/settings';
 import type { SocketLike, Target } from './connection';
 import { Lobby } from './Lobby';
@@ -59,10 +61,13 @@ export function OnlineGame({ serverUrl, target, shareUrl, onExit, openSocket }: 
       </p>
     ) : null;
 
+  // Cards and line strips are drawn from the room's map, which the server sends with every room update.
+  const network = networkOrDefault(room.map);
+
   // A player who joined between rounds has no hand yet; they wait in the lobby.
   if (room.phase === 'lobby' || !table) {
     return (
-      <>
+      <NetworkProvider network={network}>
         {banner}
         <Lobby
           room={room}
@@ -72,41 +77,49 @@ export function OnlineGame({ serverUrl, target, shareUrl, onExit, openSocket }: 
           onRulesChanged={(rules: HouseRules) => saveRules(rules)}
           onLeave={doLeave}
         />
-      </>
+      </NetworkProvider>
     );
   }
 
   const isHost = room.you === room.hostSeat;
   return (
-    <GameScreen
-      controller={table}
-      menuLabel={o.leaveRoom}
-      onMenu={doLeave}
-      banner={banner}
-      endActions={
-        <>
-          {!isHost && (
-            <p className="lobby-wait" data-testid="waiting-for-host">
-              {o.waitingNextRound}
-            </p>
-          )}
-          <div className="dialog-actions">
-            {isHost && (
-              <>
-                <button type="button" className="btn btn-primary" onClick={() => send({ type: 'playAgain' })} autoFocus data-testid="play-again-online">
-                  {t.playAgain}
-                </button>
-                <button type="button" className="btn" onClick={() => send({ type: 'backToLobby' })} data-testid="back-to-lobby">
-                  {o.backToLobby}
-                </button>
-              </>
+    <NetworkProvider network={network}>
+      <GameScreen
+        controller={table}
+        menuLabel={o.leaveRoom}
+        onMenu={doLeave}
+        banner={banner}
+        endActions={
+          <>
+            {!isHost && (
+              <p className="lobby-wait" data-testid="waiting-for-host">
+                {o.waitingNextRound}
+              </p>
             )}
-            <button type="button" className="btn" onClick={doLeave} autoFocus={!isHost} data-testid="leave-room-end">
-              {o.leaveRoom}
-            </button>
-          </div>
-        </>
-      }
-    />
+            <div className="dialog-actions">
+              {isHost && (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => send({ type: 'playAgain' })}
+                    autoFocus
+                    data-testid="play-again-online"
+                  >
+                    {t.playAgain}
+                  </button>
+                  <button type="button" className="btn" onClick={() => send({ type: 'backToLobby' })} data-testid="back-to-lobby">
+                    {o.backToLobby}
+                  </button>
+                </>
+              )}
+              <button type="button" className="btn" onClick={doLeave} autoFocus={!isHost} data-testid="leave-room-end">
+                {o.leaveRoom}
+              </button>
+            </div>
+          </>
+        }
+      />
+    </NetworkProvider>
   );
 }

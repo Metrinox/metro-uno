@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { NETWORKS, networkOrDefault } from '../../data/networks';
 import type { HouseRules } from '../../engine/game';
 import { MIN_PLAYERS } from '../../engine/game';
 import type { ClientMessage, LobbyRejectReason, RoomSnapshot } from '../../shared/protocol';
 import { HouseRulesEditor } from '../setup/HouseRulesEditor';
+import { localName } from '../i18n/i18n';
 import { useLang } from '../i18n/LangContext';
 import { LangToggle } from '../i18n/LangToggle';
 import { ThemeToggle } from '../theme/ThemeToggle';
@@ -20,8 +22,9 @@ interface Props {
 
 /** The room before (and between) rounds. Only the host can change it. */
 export function Lobby({ room, shareUrl, notice, send, onRulesChanged, onLeave }: Props) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const o = t.online;
+  const network = networkOrDefault(room.map);
   const [copied, setCopied] = useState(false);
   const isHost = room.you === room.hostSeat;
   const occupied = room.seats.filter(Boolean).length;
@@ -59,6 +62,9 @@ export function Lobby({ room, shareUrl, notice, send, onRulesChanged, onLeave }:
             {room.code}
           </span>
         </h1>
+        <p className="subtitle" data-testid="lobby-map-name">
+          {localName(network.name, lang)}
+        </p>
 
         <div className="share">
           <label className="field">
@@ -85,7 +91,12 @@ export function Lobby({ room, shareUrl, notice, send, onRulesChanged, onLeave }:
                     {seat && !seat.connected && <span className="badge badge-away">{t.away}</span>}
                   </span>
                   {isHost && !between && !seat && (
-                    <button type="button" className="btn btn-quiet" onClick={() => send({ type: 'addBot', seat: i })} data-testid={`add-bot-${i}`}>
+                    <button
+                      type="button"
+                      className="btn btn-quiet"
+                      onClick={() => send({ type: 'addBot', seat: i })}
+                      data-testid={`add-bot-${i}`}
+                    >
                       {o.addComputer}
                     </button>
                   )}
@@ -105,6 +116,26 @@ export function Lobby({ room, shareUrl, notice, send, onRulesChanged, onLeave }:
             })}
           </ol>
         </fieldset>
+
+        {isHost && !between && (
+          <fieldset>
+            <legend>{t.map}</legend>
+            <div className="segmented" data-testid="lobby-map-picker">
+              {NETWORKS.map((n) => (
+                <label key={n.id} className={n.id === network.id ? 'is-selected' : undefined} data-testid={`lobby-map-${n.id}`}>
+                  <input
+                    type="radio"
+                    name="lobby-map"
+                    value={n.id}
+                    checked={n.id === network.id}
+                    onChange={() => send({ type: 'setMap', map: n.id })}
+                  />
+                  {localName(n.name, lang)}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )}
 
         <HouseRulesEditor rules={room.rules} onChange={setRules} readOnly={!isHost || between} note={isHost ? undefined : o.rulesByHost} />
 

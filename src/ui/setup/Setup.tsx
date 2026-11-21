@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import type { HouseRules } from '../../engine/game';
 import { HouseRulesEditor } from './HouseRulesEditor';
-import { LANGS } from '../i18n/i18n';
+import { NETWORKS, networkOrDefault } from '../../data/networks';
+import { LANGS, localName } from '../i18n/i18n';
 import { useLang } from '../i18n/LangContext';
-import { network } from '../common/network';
 import { THEMES, useTheme } from '../theme/theme';
 
 const LANG_NAME = { en: 'English', zh: '繁體中文' } as const;
@@ -12,13 +12,17 @@ interface Props {
   initialOpponents: number;
   rules: HouseRules;
   onRulesChange: (rules: HouseRules) => void;
+  /** Id of the chosen map; the subtitle and colour stripes follow it. */
+  map: string;
+  onMapChange: (map: string) => void;
   onStart: (opponents: number) => void;
   /** Shown only when the site was built with a game server address. */
   onPlayOnline?: () => void;
 }
 
-export function Setup({ initialOpponents, rules, onRulesChange, onStart, onPlayOnline }: Props) {
+export function Setup({ initialOpponents, rules, onRulesChange, map, onMapChange, onStart, onPlayOnline }: Props) {
   const { lang, t, setLang } = useLang();
+  const network = networkOrDefault(map);
   const { theme, setTheme } = useTheme();
   const [opponents, setOpponents] = useState(initialOpponents);
 
@@ -31,7 +35,21 @@ export function Setup({ initialOpponents, rules, onRulesChange, onStart, onPlayO
           ))}
         </div>
         <h1>{t.title}</h1>
-        <p className="subtitle">{t.subtitle}</p>
+        <p className="subtitle" data-testid="map-name">
+          {localName(network.name, lang)}
+        </p>
+
+        <fieldset>
+          <legend>{t.map}</legend>
+          <div className="segmented">
+            {NETWORKS.map((n) => (
+              <label key={n.id} className={n.id === network.id ? 'is-selected' : undefined} data-testid={`map-${n.id}`}>
+                <input type="radio" name="map" value={n.id} checked={n.id === network.id} onChange={() => onMapChange(n.id)} />
+                {localName(n.name, lang)}
+              </label>
+            ))}
+          </div>
+        </fieldset>
 
         <fieldset>
           <legend>{t.opponents}</legend>

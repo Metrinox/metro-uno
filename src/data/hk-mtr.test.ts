@@ -55,6 +55,12 @@ describe('Hong Kong MTR heavy rail data', () => {
     expect(Object.values(hk.stations).filter((s) => s.interchange)).toHaveLength(17);
   });
 
+  it('names its wild cards Octopus and Typhoon Signal No. 8', () => {
+    expect(hk.wilds.wild.name).toEqual({ en: 'Octopus', zh: '八達通' });
+    expect(hk.wilds.draw4.name).toEqual({ en: 'Typhoon Signal No. 8', zh: '八號風球' });
+    expect(hk.wilds.wild.art).toBe('octopus');
+  });
+
   it('has 98 stations', () => {
     expect(Object.keys(hk.stations)).toHaveLength(98);
   });
@@ -62,7 +68,7 @@ describe('Hong Kong MTR heavy rail data', () => {
   it('gives every line a unique code, both names and a colour', () => {
     for (const line of hk.lines) {
       expect(line.name.en).not.toBe('');
-      expect(line.name.zh).not.toBe('');
+      expect(line.name.zh?.trim(), line.code).toBeTruthy();
       expect(line.colour).toMatch(/^#[0-9A-Fa-f]{6}$/);
     }
   });
@@ -70,7 +76,7 @@ describe('Hong Kong MTR heavy rail data', () => {
   it('gives every station non-empty English and Chinese names', () => {
     for (const st of Object.values(hk.stations)) {
       expect(st.name.en.trim()).not.toBe('');
-      expect(st.name.zh.trim()).not.toBe('');
+      expect(st.name.zh?.trim(), st.id).toBeTruthy();
     }
   });
 

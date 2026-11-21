@@ -1,4 +1,6 @@
+import { networkById } from '../src/data/networks';
 import { chooseAction } from '../src/engine/ai';
+import { buildDeck } from '../src/engine/cards';
 import { type GameState, type PlayerView } from '../src/engine/game';
 import { PROTOCOL_VERSION, type ClientMessage, type RoomSnapshot, type ServerMessage } from '../src/shared/protocol';
 import {
@@ -229,6 +231,7 @@ describe('host controls', () => {
     const before = structuredClone(h.room.state);
     for (const msg of [
       { type: 'setRules', rules: { handSize: 3 } },
+      { type: 'setMap', map: 'london-underground' },
       { type: 'addBot', seat: 2 },
       { type: 'removeSeat', seat: 0 },
       { type: 'start' },
@@ -312,6 +315,126 @@ describe('host controls', () => {
         expect(text, conn).not.toMatch(/token-|hash-of-/);
       }
     }
+  });
+});
+
+const LONDON = 'london-underground';
+const deckIds = (id: string) => buildDeck(networkById(id)!).map((c) => c.id).sort();
+const gameCardIds = (g: GameState) => [...g.players.flatMap((p) => p.hand), ...g.drawPile, ...g.discard].map((c) => c.id).sort();
+
+describe('room map', () => {
+  it('starts as Hong Kong when the creator sends no map', () => {
+    const h = new Harness();
+    const host = h.create('Mei');
+    expect(h.room.state.map).toBe('hk-mtr');
+    expect(h.roomOf(host).map).toBe('hk-mtr');
+  });
+
+  it('starts with the map the creator chose', () => {
+    const h = new Harness();
+    const host = h.connect();
+    h.send(host, { type: 'createRoom', name: 'Mei', rules: {}, map: LONDON });
+    expect(h.roomOf(host).map).toBe(LONDON);
+  });
+
+  it('refuses to create a room on an unknown map', () => {
+    const h = new Harness();
+    const host = h.connect();
+    h.send(host, { type: 'createRoom', name: 'Mei', rules: {}, map: 'atlantis' });
+    expect(h.last(host, 'rejected')).toEqual({ type: 'rejected', reason: 'unknown-map' });
+    expect(h.last(host, 'welcome')).toBeUndefined();
+    expect(h.room.state.seats.every((s) => s === null)).toBe(true);
+    // The same socket can still create the room on a real map.
+    h.send(host, { type: 'createRoom', name: 'Mei', rules: {}, map: LONDON });
+    expect(h.roomOf(host).map).toBe(LONDON);
+  });
+
+  it('map changes reach every guest', () => {
+    const h = new Harness();
+    const host = h.create('Mei');
+    const guest = h.join('Ka Ho');
+    h.clear();
+    h.send(host, { type: 'setMap', map: LONDON });
+    expect(h.roomOf(guest).map).toBe(LONDON);
+    expect(h.roomOf(host).map).toBe(LONDON);
+  });
+
+  it('a guest cannot change the map', () => {
+    const h = new Harness();
+    h.create('Mei');
+    const guest = h.join('Ka Ho');
+    h.send(guest, { type: 'setMap', map: LONDON });
+    expect(h.last(guest, 'rejected')).toEqual({ type: 'rejected', reason: 'not-host' });
+    expect(h.room.state.map).toBe('hk-mtr');
+  });
+
+  it('rejects an unknown map without changing the room', () => {
+    const h = new Harness();
+    const host = h.create('Mei');
+    const guest = h.join('Ka Ho');
+    const before = structuredClone(h.room.state);
+    h.clear();
+    h.send(host, { type: 'setMap', map: 'atlantis' });
+    expect(h.last(host, 'rejected')).toEqual({ type: 'rejected', reason: 'unknown-map' });
+    expect(h.room.state).toEqual(before);
+    expect(h.last(guest, 'room')).toBeUndefined();
+  });
+
+  it('refuses a map change during a round', () => {
+    const { h, host } = startedRoom(['Ka Ho']);
+    const game = structuredClone(h.game);
+    h.send(host, { type: 'setMap', map: LONDON });
+    expect(h.last(host, 'rejected')).toEqual({ type: 'rejected', reason: 'not-in-lobby' });
+    expect(h.room.state.map).toBe('hk-mtr');
+    expect(h.game).toEqual(game);
+  });
+
+  it('deals a London round from the London deck', () => {
+    const h = new Harness();
+    // A small hand keeps these tests independent of the size of the London deck.
+    const host = h.create('Mei', { handSize: 3 });
+    const guest = h.join('Ka Ho');
+    h.send(host, { type: 'setMap', map: LONDON });
+    h.send(host, { type: 'start' });
+    expect(deckIds(LONDON)).not.toEqual(deckIds('hk-mtr'));
+    expect(gameCardIds(h.game)).toEqual(deckIds(LONDON));
+    expect(h.game.lines).toEqual(networkById(LONDON)!.lines.map((l) => l.code));
+    const london = new Set(deckIds(LONDON));
+    for (const c of [host, guest]) {
+      expect(h.roomOf(c).map).toBe(LONDON);
+      expect(h.viewOf(c).hand.every((card) => london.has(card.id))).toBe(true);
+    }
+  });
+
+  it('deals a Hong Kong round by default', () => {
+    const { h } = startedRoom(['Ka Ho']);
+    expect(gameCardIds(h.game)).toEqual(deckIds('hk-mtr'));
+  });
+
+  it('a player who reloads during a London round gets the London room and table back', () => {
+    const h = new Harness();
+    // A small hand keeps these tests independent of the size of the London deck.
+    const host = h.create('Mei', { handSize: 3 });
+    const guest = h.join('Ka Ho');
+    h.send(host, { type: 'setMap', map: LONDON });
+    h.send(host, { type: 'start' });
+    const session = h.sessions.get(guest)!;
+    h.drop(guest);
+    const back = h.connect(session);
+    expect(h.roomOf(back).map).toBe(LONDON);
+    const london = new Set(deckIds(LONDON));
+    expect(h.viewOf(back).hand.every((card) => london.has(card.id))).toBe(true);
+  });
+
+  it('keeps the map for the next round', () => {
+    const h = new Harness();
+    const host = h.create('Mei', { handSize: 3 });
+    h.join('Ka Ho');
+    h.send(host, { type: 'setMap', map: LONDON });
+    h.send(host, { type: 'start' });
+    h.room.state.phase = 'ended';
+    h.send(host, { type: 'playAgain' });
+    expect(gameCardIds(h.game)).toEqual(deckIds(LONDON));
   });
 });
 

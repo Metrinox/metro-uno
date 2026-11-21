@@ -1,6 +1,14 @@
+import { londonUnderground } from '../data/london-underground';
+import { loadNetwork, type Network } from '../data/network';
+import { buildDeck } from './cards';
 import type { HouseRules } from './game';
 import { simulateRound } from './simulate';
 import { hk } from './test-helpers';
+
+const networks: [string, Network][] = [
+  ['Hong Kong', hk],
+  ['London', loadNetwork(londonUnderground)],
+];
 
 // Max rounds (of 1,000) allowed to hit the safety limit. Only the default rules are held to a
 // balance target; "draw until playable" makes rounds far longer (hands grow), which is a
@@ -13,35 +21,39 @@ const ruleSets: [string, Partial<HouseRules>, number][] = [
   ['first out ends the round', { playUntilLast: false }, 10],
 ];
 
-describe.each(ruleSets)('AI-only simulation (%s)', (_name, rules, maxLimitHits) => {
-  it('plays 1,000 seeded rounds with no rejected actions', () => {
-    let rejections = 0;
-    let finished = 0;
-    let hitLimit = 0;
-    const started = Date.now();
-    for (let seed = 0; seed < 1000; seed++) {
-      const r = simulateRound(hk, 2 + (seed % 3), seed, rules);
-      rejections += r.rejections;
-      if (r.state.phase === 'ended') finished++;
-      if (r.hitLimit) hitLimit++;
-      // Cards are conserved: 130 in total.
-      const total =
-        r.state.drawPile.length + r.state.discard.length + r.state.players.reduce((n, p) => n + p.hand.length, 0);
-      expect(total).toBe(130);
-      if (r.state.phase === 'ended') {
-        // Everyone who went out has no cards; with "play until one is left" only one player still has cards.
-        for (const id of r.state.finished) expect(r.state.players.find((p) => p.id === id)!.hand).toHaveLength(0);
-        expect(r.state.winner).toBe(r.state.finished[0]);
-        const left = r.state.players.filter((p) => p.hand.length > 0).length;
-        if (r.state.rules.playUntilLast) expect(left).toBe(1);
-        else expect(r.state.finished).toHaveLength(1);
+describe.each(networks)('AI-only simulation on %s', (_map, network) => {
+  // Cards are conserved: the whole deck (130 for Hong Kong) is always in play.
+  const deckSize = buildDeck(network).length;
+
+  describe.each(ruleSets)('%s', (_name, rules, maxLimitHits) => {
+    it('plays 1,000 seeded rounds with no rejected actions', () => {
+      let rejections = 0;
+      let finished = 0;
+      let hitLimit = 0;
+      const started = Date.now();
+      for (let seed = 0; seed < 1000; seed++) {
+        const r = simulateRound(network, 2 + (seed % 3), seed, rules);
+        rejections += r.rejections;
+        if (r.state.phase === 'ended') finished++;
+        if (r.hitLimit) hitLimit++;
+        const total =
+          r.state.drawPile.length + r.state.discard.length + r.state.players.reduce((n, p) => n + p.hand.length, 0);
+        expect(total).toBe(deckSize);
+        if (r.state.phase === 'ended') {
+          // Everyone who went out has no cards; with "play until one is left" only one player still has cards.
+          for (const id of r.state.finished) expect(r.state.players.find((p) => p.id === id)!.hand).toHaveLength(0);
+          expect(r.state.winner).toBe(r.state.finished[0]);
+          const left = r.state.players.filter((p) => p.hand.length > 0).length;
+          if (r.state.rules.playUntilLast) expect(left).toBe(1);
+          else expect(r.state.finished).toHaveLength(1);
+        }
       }
-    }
-    expect(rejections).toBe(0);
-    // Spec: every round ends with a winner or reaches the safety turn limit.
-    // Very long rounds are a balance concern (design.md Risks), not a rules bug.
-    expect(finished + hitLimit).toBe(1000);
-    expect(hitLimit).toBeLessThanOrEqual(maxLimitHits);
-    expect(Date.now() - started).toBeLessThan(30_000);
-  }, 60_000);
+      expect(rejections).toBe(0);
+      // Spec: every round ends with a winner or reaches the safety turn limit.
+      // Very long rounds are a balance concern (design.md Risks), not a rules bug.
+      expect(finished + hitLimit).toBe(1000);
+      expect(hitLimit).toBeLessThanOrEqual(maxLimitHits);
+      expect(Date.now() - started).toBeLessThan(30_000);
+    }, 60_000);
+  });
 });

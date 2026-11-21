@@ -29,6 +29,39 @@ test.describe('setup', () => {
     expect(await page.evaluate(() => window.__metroTest!.getState().players.length)).toBe(3);
     await expect(page.getByTestId('hand').locator('.card')).toHaveCount(7);
   });
+
+  test('a London round uses London cards, and London stays chosen after a reload', async ({ page }) => {
+    await page.goto('/?seed=london&aiDelay=60000');
+    await expect(page.getByTestId('map-hk-mtr')).toHaveClass(/is-selected/);
+    await page.getByTestId('map-london-underground').click();
+    await expect(page.getByTestId('map-london-underground')).toHaveClass(/is-selected/);
+    await expect(page.getByTestId('map-name')).toHaveText('London Underground');
+    await page.getByTestId('start').click();
+    await page.getByTestId('hand').waitFor();
+
+    // Royal Oak sits on the merged Circle · Hammersmith & City · Metropolitan line.
+    await arrange(page, { hands: { p0: ['st:royal-oak'] } });
+    const card = page.getByTestId('hand').locator('[data-card="st:royal-oak"]');
+    await expect(card.locator('.card-band-part')).toHaveText(['CIR', 'H&C', 'MET']);
+    await expect(card.locator('.card-number')).toHaveText(/\d+/);
+    await expect(card).toContainText('Royal Oak');
+
+    // With a merged-line card on top, the badge and line strip show that line.
+    const top = await page.evaluate(() => {
+      const s = window.__metroTest!.getState();
+      const all = [...s.drawPile, ...s.players.flatMap((p) => p.hand)];
+      return all.find((c) => c.kind === 'station' && c.line === 'SSR' && c.id !== 'st:royal-oak')!.id;
+    });
+    await arrange(page, { hands: { p0: ['st:royal-oak'] }, top });
+    await expect(page.getByTestId('current-line').locator('.line-code')).toHaveText(['CIR', 'H&C', 'MET']);
+    const strip = page.getByTestId('line-strip');
+    for (const station of ['royal-oak', 'finchley-road', 'aldgate']) await expect(strip.locator(`[data-station="${station}"]`)).toHaveCount(1);
+
+    await page.reload();
+    await expect(page.getByTestId('start')).toBeVisible();
+    await expect(page.getByTestId('map-london-underground')).toHaveClass(/is-selected/);
+    await expect(page.getByTestId('map-name')).toHaveText('London Underground');
+  });
 });
 
 test.describe('table', () => {

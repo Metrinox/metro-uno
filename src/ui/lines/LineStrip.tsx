@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { stationName } from '../i18n/format';
 import { useLang } from '../i18n/LangContext';
+import { localName } from '../i18n/i18n';
 import { layoutLine } from './lineLayout';
-import { network } from '../common/network';
+import { useNetwork } from '../common/NetworkContext';
 
-const COL_W = 58;
+const COL_W = 68;
 const PAD_X = 36;
 /** Vertical distance between rows (trunk and each branch row above it). */
 const ROW_H = 38;
+/** Extra height above a branch row whose names would otherwise run into the row above it. */
+const LABEL_H = 26;
 const TRACK_W = 4;
 const DOT_R = 11;
 
@@ -37,29 +40,33 @@ function wrapName(name: string): string[] {
 /** The current line's stations, branches at their forks, with the top card's station highlighted. */
 export function LineStrip({ line, highlightStation }: { line: string; highlightStation: string | null }) {
   const { lang, t } = useLang();
+  const network = useNetwork();
   const def = network.lineByCode[line]!;
   const layout = useMemo(() => layoutLine(def), [def]);
   const scroller = useRef<HTMLDivElement>(null);
 
   // Trunk names go below the dots; branch names above, so diagonal tracks never cross text.
-  // Row 0 (the trunk) sits low enough to leave room for branch rows and their names above.
-  const trunkY = -layout.minRow * ROW_H + (layout.minRow < 0 ? DOT_R + 30 : DOT_R + 6);
+  // A branch row with another row's stations at or next to its columns directly above it
+  // gets extra height, so its names fit between the two rows (e.g. the District's
+  // Wimbledon branch under its Edgware Road branch).
+  const rowY = useMemo(() => {
+    const cols = (row: number) => layout.stops.filter((st) => st.row === row).map((st) => st.col);
+    const offset = new Map<number, number>([[0, 0]]);
+    for (let row = 0; row > layout.minRow; row--) {
+      const above = cols(row - 1);
+      const crowded = row < 0 && cols(row).some((c) => above.some((a) => Math.abs(a - c) <= 1));
+      offset.set(row - 1, offset.get(row)! + ROW_H + (crowded ? LABEL_H : 0));
+    }
+    // Row 0 (the trunk) sits low enough to leave room for branch rows and their names above.
+    const trunkY = offset.get(layout.minRow)! + (layout.minRow < 0 ? DOT_R + 30 : DOT_R + 6);
+    return (row: number) => trunkY - offset.get(row)!;
+  }, [layout]);
   const x = (col: number) => PAD_X + col * COL_W;
-  // A branch station with another branch directly above it gets its name to the right instead.
-  const occupied = new Set(layout.stops.map((st) => `${st.col},${st.row}`));
-  const sideLabel = (col: number, row: number) => row < 0 && occupied.has(`${col},${row - 1}`);
-  const nameOf = (id: string) => stationName(network, id, lang);
-  const sideEnd = Math.max(
-    0,
-    ...layout.stops
-      .filter((st) => sideLabel(st.col, st.row))
-      .map((st) => x(st.col) + DOT_R + 6 + nameOf(st.stationId).length * (lang === 'en' ? 5.6 : 10.5)),
-  );
-  const width = Math.max(x(layout.cols - 1) + PAD_X, sideEnd + 8);
-  const height = trunkY + DOT_R + 30;
+  const width = x(layout.cols - 1) + PAD_X;
+  const height = rowY(0) + DOT_R + 30;
   const where = useMemo(
-    () => new Map(layout.stops.map((s) => [s.stationId, { x: PAD_X + s.col * COL_W, y: trunkY + s.row * ROW_H }])),
-    [layout, trunkY],
+    () => new Map(layout.stops.map((s) => [s.stationId, { x: PAD_X + s.col * COL_W, y: rowY(s.row) }])),
+    [layout, rowY],
   );
 
   useEffect(() => {
@@ -75,7 +82,7 @@ export function LineStrip({ line, highlightStation }: { line: string; highlightS
       className="line-strip"
       ref={scroller}
       role="group"
-      aria-label={def.name[lang]}
+      aria-label={localName(def.name, lang)}
       data-testid="line-strip"
       tabIndex={0}
     >
@@ -113,8 +120,7 @@ export function LineStrip({ line, highlightStation }: { line: string; highlightS
           const current = stop.stationId === highlightStation;
           const interchange = stop.number === null;
           const name = stationName(network, stop.stationId, lang);
-          const side = sideLabel(stop.col, stop.row);
-          const lines = lang === 'en' && !side ? wrapName(name) : [name];
+          const lines = lang === 'en' ? wrapName(name) : [name];
           const above = stop.row < 0;
           const textY = (i: number) =>
             above ? p.y - DOT_R - 6 - (lines.length - 1 - i) * 11 : p.y + DOT_R + 13 + i * 11;
@@ -140,17 +146,11 @@ export function LineStrip({ line, highlightStation }: { line: string; highlightS
                   {stop.number ?? '⇄'}
                 </text>
               </g>
-              {side ? (
-                <text x={p.x + DOT_R + 6} y={p.y} dy="0.35em" textAnchor="start" className="stop-name">
-                  {name}
+              {lines.map((l, i) => (
+                <text key={i} x={p.x} y={textY(i)} textAnchor="middle" className="stop-name">
+                  {l}
                 </text>
-              ) : (
-                lines.map((l, i) => (
-                  <text key={i} x={p.x} y={textY(i)} textAnchor="middle" className="stop-name">
-                    {l}
-                  </text>
-                ))
-              )}
+              ))}
             </g>
           );
         })}

@@ -6,7 +6,7 @@ import { LocalGame } from './local/LocalGame';
 import { loadSession, type Target } from './online/connection';
 import { OnlineGame, type OnlineExit } from './online/OnlineGame';
 import { OnlineMenu } from './online/OnlineMenu';
-import { loadRules, saveRules } from './common/settings';
+import { loadMap, loadRules, saveMap, saveRules } from './common/settings';
 import { Setup } from './setup/Setup';
 import type { GameConfig } from './local/useLocalGame';
 
@@ -71,6 +71,8 @@ export function App() {
   const [round, setRound] = useState(0);
   const [opponents, setOpponents] = useState(2);
   const [rules, setRules] = useState<HouseRules>(() => loadRules());
+  /** Id of the map chosen on the setup screen (remembered on this device). */
+  const [map, setMap] = useState(() => loadMap());
   const [mode, setMode] = useState<Mode>(() => initialMode(room));
 
   const changeRules = (next: HouseRules) => {
@@ -78,11 +80,16 @@ export function App() {
     saveRules(next);
   };
 
+  const changeMap = (next: string) => {
+    setMap(next);
+    saveMap(next);
+  };
+
   const start = (n: number) => {
     const next = round + 1;
     setRound(next);
     setOpponents(n);
-    setMode({ kind: 'local', config: { opponents: n, rules, seed: fixedSeed ? `${fixedSeed}-${next}` : randomSeed() } });
+    setMode({ kind: 'local', config: { opponents: n, rules, map, seed: fixedSeed ? `${fixedSeed}-${next}` : randomSeed() } });
   };
 
   const goOnline = (target: Target) => {
@@ -104,6 +111,8 @@ export function App() {
           initialOpponents={opponents}
           rules={rules}
           onRulesChange={changeRules}
+          map={map}
+          onMapChange={changeMap}
           onStart={start}
           onPlayOnline={SERVER_URL ? () => setMode({ kind: 'online-menu' }) : undefined}
         />

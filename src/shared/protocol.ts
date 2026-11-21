@@ -5,6 +5,7 @@
  * `parseServerMessage`. Bump `PROTOCOL_VERSION` whenever a message shape, or
  * `GameState`, `PlayerView` or `Action`, changes.
  */
+import { networkById } from '../data/networks';
 import type { Action, GameEvent, HouseRules, PlayerView, RejectReason } from '../engine/game';
 
 export const PROTOCOL_VERSION = 1;
@@ -35,6 +36,8 @@ export interface RoomSnapshot {
   code: string;
   phase: RoomPhase;
   rules: HouseRules;
+  /** The id of the room's map (see `networkById`). */
+  map: string;
   hostSeat: string;
   /** Always `ROOM_SEATS` long; `null` is a free seat. */
   seats: (SeatSnapshot | null)[];
@@ -53,9 +56,10 @@ export type ErrorCode =
 
 export type ClientMessage =
   | { type: 'hello'; protocol: number; session?: string }
-  | { type: 'createRoom'; name: string; rules: Partial<HouseRules> }
+  | { type: 'createRoom'; name: string; rules: Partial<HouseRules>; map?: string }
   | { type: 'joinRoom'; name: string }
   | { type: 'setRules'; rules: Partial<HouseRules> }
+  | { type: 'setMap'; map: string }
   | { type: 'addBot'; seat: number }
   | { type: 'removeSeat'; seat: number }
   | { type: 'start' }
@@ -65,7 +69,14 @@ export type ClientMessage =
   | { type: 'leave' }
   | { type: 'ping' };
 
-export type LobbyRejectReason = 'not-host' | 'not-in-lobby' | 'not-enough-players' | 'seat-taken' | 'seat-empty' | 'not-playing';
+export type LobbyRejectReason =
+  | 'not-host'
+  | 'not-in-lobby'
+  | 'not-enough-players'
+  | 'seat-taken'
+  | 'seat-empty'
+  | 'not-playing'
+  | 'unknown-map';
 
 export type ServerMessage =
   | { type: 'welcome'; code: string; session: string; seat: string }
@@ -105,6 +116,14 @@ function isRules(v: unknown): v is Partial<HouseRules> {
     const type = RULE_TYPES[k as keyof HouseRules];
     return type !== undefined && typeof val === type && (type !== 'number' || Number.isFinite(val));
   });
+}
+
+const MAP_ID_MAX = 64;
+const isMapId = (v: unknown): v is string => isStr(v, MAP_ID_MAX) && v.length > 0;
+
+/** True for the id of a map the game offers. */
+export function isKnownMap(id: string): boolean {
+  return networkById(id) !== undefined;
 }
 
 const CARD_ID_MAX = 64;
@@ -152,11 +171,15 @@ export function parseClientMessage(text: unknown): ClientMessage | null {
         ? { type: 'hello', protocol: m.protocol, ...(m.session !== undefined ? { session: m.session as string } : {}) }
         : null;
     case 'createRoom':
-      return isStr(m.name, 200) && isRules(m.rules) ? { type: 'createRoom', name: m.name, rules: m.rules } : null;
+      return isStr(m.name, 200) && isRules(m.rules) && isOptional(m.map, isMapId)
+        ? { type: 'createRoom', name: m.name, rules: m.rules, ...(m.map !== undefined ? { map: m.map as string } : {}) }
+        : null;
     case 'joinRoom':
       return isStr(m.name, 200) ? { type: 'joinRoom', name: m.name } : null;
     case 'setRules':
       return isRules(m.rules) ? { type: 'setRules', rules: m.rules } : null;
+    case 'setMap':
+      return isMapId(m.map) ? { type: 'setMap', map: m.map } : null;
     case 'addBot':
     case 'removeSeat':
       return isInt(m.seat) && m.seat >= 0 && m.seat < ROOM_SEATS ? { type: m.type, seat: m.seat } : null;
@@ -202,6 +225,7 @@ function isRoom(v: unknown): v is RoomSnapshot {
     isStr(v.code, 8) &&
     (v.phase === 'lobby' || v.phase === 'playing' || v.phase === 'ended') &&
     isRules(v.rules) &&
+    isMapId(v.map) &&
     isStr(v.hostSeat, 8) &&
     isStr(v.you, 8) &&
     Array.isArray(v.seats) &&

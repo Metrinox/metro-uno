@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import type { Network } from '../../data/network';
 import type { Card } from '../../engine/cards';
 import { canPlay, isPlayable, lineChoices, sameNumberCards } from '../../engine/game';
 import { CardView } from '../cards/CardView';
@@ -11,7 +12,7 @@ import { LineChooser } from './LineChooser';
 import { LineStrip } from '../lines/LineStrip';
 import { SameNumberChooser } from './SameNumberChooser';
 import { useLang } from '../i18n/LangContext';
-import { network } from '../common/network';
+import { useNetwork } from '../common/NetworkContext';
 import { seatLabel, type LogItem, type SeatInfo, type TableController } from './tableController';
 
 interface Props {
@@ -27,7 +28,7 @@ interface Props {
 
 type Who = (id: string) => { who: string; you: boolean };
 
-function describe(item: LogItem, t: Dict, lang: Lang, who: Who): string | null {
+function describe(item: LogItem, network: Network, t: Dict, lang: Lang, who: Who): string | null {
   switch (item.type) {
     case 'played':
       return t.ev.played(who(item.player), cardName(item.card, network, lang, t));
@@ -61,6 +62,7 @@ function describe(item: LogItem, t: Dict, lang: Lang, who: Who): string | null {
 
 export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }: Props) {
   const { lang, t } = useLang();
+  const network = useNetwork();
   const { view, seats, log, send, reject } = controller;
   const [choosing, setChoosing] = useState<{ cards: Card[]; lines: string[] } | null>(null);
   const [grouping, setGrouping] = useState<{ first: Card; others: Card[] } | null>(null);
@@ -72,7 +74,7 @@ export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }
 
   const myTurn = view.phase === 'playing' && view.turn === view.myIndex;
   const top = view.topCard;
-  const hand = useMemo(() => view.hand.slice().sort(handOrder(network)), [view.hand]);
+  const hand = useMemo(() => view.hand.slice().sort(handOrder(network)), [view.hand, network]);
   const playableNow = (c: Card) =>
     myTurn && (view.drawnCardId === null || view.drawnCardId === c.id) && canPlay(c, view);
   // Two cards, or more when same-number cards can be played together.
@@ -129,7 +131,7 @@ export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }
       const next = log.slice(i + 1).find((e) => e.type !== 'turn');
       return !(next?.type === 'drew' && next.player === item.player && next.reason === 'stack');
     })
-    .map((item) => ({ id: item.id, text: describe(item, t, lang, who), rejected: item.type === 'rejected' }))
+    .map((item) => ({ id: item.id, text: describe(item, network, t, lang, who), rejected: item.type === 'rejected' }))
     .filter((m) => m.text !== null)
     .slice(-3);
   const turnText = myTurn ? t.yourTurn : t.theirTurn(nameOf(view.players[view.turn]!.id));

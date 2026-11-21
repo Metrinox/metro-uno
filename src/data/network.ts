@@ -8,7 +8,8 @@
 
 export interface LocalizedName {
   en: string;
-  zh: string;
+  /** Traditional Chinese. Optional: names without one show in English. */
+  zh?: string;
 }
 
 export interface BranchDef {
@@ -57,12 +58,31 @@ export interface TransferDef {
   to: string;
 }
 
+/** Artwork for a wild card face. `ring` is the line-colour ring used by draw-4 wilds. */
+export type WildArt = 'octopus' | 'oyster' | 'ring';
+
+/** How a network names and draws one wild role. Display only: rules never change. */
+export interface WildTheme {
+  name: LocalizedName;
+  art: WildArt;
+}
+
+/**
+ * A network's wild-card theme, by engine role: `wild` is the plain wild
+ * (engine id `octopus`), `draw4` the wild + draw 4 (engine id `typhoon`).
+ */
+export interface WildThemes {
+  wild: WildTheme;
+  draw4: WildTheme;
+}
+
 export interface NetworkDef {
   id: string;
   name: LocalizedName;
   stations: Record<string, LocalizedName>;
   lines: LineDef[];
   transfers?: TransferDef[];
+  wilds: WildThemes;
 }
 
 export interface LineStop {
@@ -102,6 +122,7 @@ export interface Station {
 export interface Network {
   id: string;
   name: LocalizedName;
+  wilds: WildThemes;
   lines: Line[];
   lineByCode: Record<string, Line>;
   stations: Record<string, Station>;
@@ -211,5 +232,5 @@ export function loadNetwork(def: NetworkDef): Network {
     src.transfer = { to, lines };
   }
 
-  return { id: def.id, name: def.name, lines, lineByCode, stations };
+  return { id: def.id, name: def.name, wilds: def.wilds, lines, lineByCode, stations };
 }

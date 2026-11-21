@@ -1,4 +1,5 @@
 import { DEFAULT_RULES, normalizeRules, type HouseRules } from '../../engine/game';
+import { DEFAULT_NETWORK_ID, networkById } from '../../data/networks';
 
 const RULES_KEY = 'metro-uno.rules';
 
@@ -37,5 +38,26 @@ export function saveName(name: string, storage: () => Storage | undefined = () =
     storage()?.setItem(NAME_KEY, name);
   } catch {
     /* storage unavailable */
+  }
+}
+
+const MAP_KEY = 'metro-uno.map';
+
+/** The id of the map last chosen on the setup screen; Hong Kong when none is saved or it is unknown. */
+export function loadMap(storage: () => Storage | undefined = () => globalThis.localStorage): string {
+  try {
+    const id = storage()?.getItem(MAP_KEY);
+    return id && networkById(id) ? id : DEFAULT_NETWORK_ID;
+  } catch {
+    return DEFAULT_NETWORK_ID;
+  }
+}
+
+/** Saves the chosen map id; storage failures are ignored. */
+export function saveMap(id: string, storage: () => Storage | undefined = () => globalThis.localStorage): void {
+  try {
+    storage()?.setItem(MAP_KEY, id);
+  } catch {
+    /* storage unavailable: the map just isn't remembered */
   }
 }

@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { act, renderHook } from '@testing-library/react';
 import { DEFAULT_RULES, viewFor, createGame } from '../../engine/game';
+import { networkById } from '../../data/networks';
+import { buildDeck } from '../../engine/cards';
 import { hk } from '../../engine/test-helpers';
 import type { RoomSnapshot, ServerMessage } from '../../shared/protocol';
 import type { SocketLike } from './connection';
@@ -25,6 +27,7 @@ const room: RoomSnapshot = {
   code: 'K7MX',
   phase: 'playing',
   rules: { ...DEFAULT_RULES },
+  map: 'hk-mtr',
   hostSeat: 's1',
   you: 's2',
   seats: [
@@ -97,6 +100,34 @@ describe('useOnlineGame', () => {
     deliver({ type: 'rejected', reason: 'not-host' });
     expect(hook.result.current.state.notice?.reason).toBe('not-host');
     expect(hook.result.current.state.log).toEqual([]);
+  });
+
+  it('follows the map the host picks in the lobby', () => {
+    const { hook, deliver } = setup();
+    deliver({ type: 'room', room: { ...room, phase: 'lobby' } });
+    expect(hook.result.current.state.room?.map).toBe('hk-mtr');
+    deliver({ type: 'room', room: { ...room, phase: 'lobby', map: 'london-underground' } });
+    expect(hook.result.current.state.room?.map).toBe('london-underground');
+  });
+
+  it('builds a London table from a London round', () => {
+    const london = networkById('london-underground')!;
+    const londonGame = createGame({
+      network: london,
+      seed: 'online-hook-london',
+      rules: { ...DEFAULT_RULES, handSize: 3 },
+      players: [
+        { id: 's1', name: 'Mei', isHuman: true },
+        { id: 's2', name: 'Ka Ho', isHuman: true },
+      ],
+    });
+    const { hook, deliver } = setup();
+    deliver({ type: 'room', room: { ...room, map: 'london-underground' } });
+    deliver({ type: 'table', view: viewFor(londonGame, 's2'), events: [] });
+    const deck = new Set(buildDeck(london).map((c) => c.id));
+    expect(hook.result.current.state.room?.map).toBe('london-underground');
+    expect(hook.result.current.table!.view.hand.every((c) => deck.has(c.id))).toBe(true);
+    expect(hook.result.current.table!.view.lines).toEqual(london.lines.map((l) => l.code));
   });
 
   it('reports a final error', () => {

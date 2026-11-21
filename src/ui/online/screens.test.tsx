@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { networkById } from '../../data/networks';
+import { buildDeck } from '../../engine/cards';
 import { createGame, DEFAULT_RULES, viewFor } from '../../engine/game';
 import { hk } from '../../engine/test-helpers';
 import type { RoomSnapshot, ServerMessage } from '../../shared/protocol';
@@ -10,6 +12,11 @@ import type { SocketLike } from './connection';
 import { Lobby } from './Lobby';
 import { OnlineGame } from './OnlineGame';
 import { OnlineMenu } from './OnlineMenu';
+
+const LONDON = 'london-underground';
+const london = networkById(LONDON)!;
+const londonName = london.name.en;
+const hongKongName = networkById('hk-mtr')!.name.en;
 
 const wrap = (ui: ReactNode) => render(<LangProvider>{ui}</LangProvider>);
 
@@ -41,6 +48,7 @@ const lobby = (you: string, over: Partial<RoomSnapshot> = {}): RoomSnapshot => (
   code: 'K7MX',
   phase: 'lobby',
   rules: { ...DEFAULT_RULES },
+  map: 'hk-mtr',
   hostSeat: 's1',
   seats,
   you,
@@ -137,6 +145,21 @@ describe('Lobby', () => {
     expect(send).toHaveBeenLastCalledWith({ type: 'start' });
   });
 
+  it('shows the room map and lets the host change it', () => {
+    const send = vi.fn();
+    wrap(<Lobby {...props} room={lobby('s1')} send={send} onRulesChanged={vi.fn()} />);
+    expect(screen.getByTestId('lobby-map-name').textContent).toBe(hongKongName);
+    expect(screen.getByTestId('lobby-map-hk-mtr').className).toContain('is-selected');
+    fireEvent.click(screen.getByTestId(`lobby-map-${LONDON}`).querySelector('input')!);
+    expect(send).toHaveBeenLastCalledWith({ type: 'setMap', map: LONDON });
+  });
+
+  it('shows guests the map without a picker', () => {
+    wrap(<Lobby {...props} room={lobby('s2', { map: LONDON })} send={vi.fn()} onRulesChanged={vi.fn()} />);
+    expect(screen.getByTestId('lobby-map-name').textContent).toBe(londonName);
+    expect(screen.queryByTestId('lobby-map-picker')).toBeNull();
+  });
+
   it('disables Start until 2 seats are taken', () => {
     wrap(<Lobby {...props} room={lobby('s1', { seats: [seats[0]!, null, null, null] })} send={vi.fn()} onRulesChanged={vi.fn()} />);
     expect((screen.getByTestId('start-online') as HTMLButtonElement).disabled).toBe(true);
@@ -216,6 +239,38 @@ describe('OnlineGame', () => {
     fireEvent.click(screen.getByTestId('leave-room-end'));
     expect(socket.messages.at(-1)).toEqual({ type: 'leave' });
     expect(onExit).toHaveBeenCalledWith(null);
+  });
+
+  it('shows a guest the map the host picks', () => {
+    const { deliver } = setup();
+    deliver({ type: 'room', room: lobby('s2') });
+    expect(screen.getByTestId('lobby-map-name').textContent).toBe(hongKongName);
+    deliver({ type: 'room', room: lobby('s2', { map: LONDON }) });
+    expect(screen.getByTestId('lobby-map-name').textContent).toBe(londonName);
+  });
+
+  it('draws a London round with London cards and lines', () => {
+    const game = createGame({
+      network: london,
+      seed: 'london-table',
+      rules: { ...DEFAULT_RULES, handSize: 3 },
+      players: [
+        { id: 's1', name: 'Mei', isHuman: true },
+        { id: 's2', name: 'Ka Ho', isHuman: true },
+      ],
+    });
+    const { deliver } = setup();
+    deliver({ type: 'room', room: lobby('s2', { phase: 'playing', map: LONDON }) });
+    deliver({ type: 'table', view: viewFor(game, 's2'), events: [] });
+    const deck = new Set(buildDeck(london).map((c) => c.id));
+    const shown = [...screen.getByTestId('hand').querySelectorAll('[data-card]')].map((el) => el.getAttribute('data-card'));
+    expect(shown).toHaveLength(3);
+    expect(shown.every((id) => deck.has(id!))).toBe(true);
+    const codes = new Set(london.lines.flatMap((l) => [l.code, ...l.labels.map((x) => x.code)]));
+    for (const band of document.querySelectorAll('[data-line]')) expect(codes.has(band.getAttribute('data-line')!)).toBe(true);
+    const stops = [...screen.getByTestId('line-strip').querySelectorAll('[data-station]')];
+    expect(stops.length).toBeGreaterThan(0);
+    for (const stop of stops) expect(london.stations[stop.getAttribute('data-station')!]).toBeDefined();
   });
 
   it('shows the reconnecting banner at the table', () => {

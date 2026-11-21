@@ -88,11 +88,24 @@ describe('OnlineConnection', () => {
     t.last().serverOpens();
     expect(t.last().messages).toEqual([
       { type: 'hello', protocol: PROTOCOL_VERSION },
-      { type: 'createRoom', name: 'Mei', rules: DEFAULT_RULES },
+      { type: 'createRoom', name: 'Mei', rules: DEFAULT_RULES, map: 'hk-mtr' },
     ]);
     t.last().serverSends({ type: 'welcome', code: 'K7MX', session: 'tok', seat: 's1' });
     expect(loadSession(() => t.store)).toEqual({ serverUrl: 'wss://server.test/', code: 'K7MX', session: 'tok' });
     expect(t.statuses).toEqual(['open']);
+  });
+
+  it('creates the room on the map chosen on the setup screen', () => {
+    const t = setup(create);
+    t.store.setItem('metro-uno.map', 'london-underground');
+    t.last().serverOpens();
+    expect(t.last().messages.at(-1)).toMatchObject({ type: 'createRoom', map: 'london-underground' });
+  });
+
+  it('creates the room on the map given in the target', () => {
+    const t = setup({ ...create, map: 'london-underground' });
+    t.last().serverOpens();
+    expect(t.last().messages.at(-1)).toMatchObject({ type: 'createRoom', map: 'london-underground' });
   });
 
   it('joins by code', () => {

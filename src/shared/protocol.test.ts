@@ -1,4 +1,4 @@
-import { MAX_MESSAGE_BYTES, parseClientMessage, parseServerMessage, PING_TEXT, PROTOCOL_VERSION } from './protocol';
+import { isKnownMap, MAX_MESSAGE_BYTES, parseClientMessage, parseServerMessage, PING_TEXT, PROTOCOL_VERSION } from './protocol';
 
 const j = (v: unknown) => JSON.stringify(v);
 
@@ -7,7 +7,12 @@ describe('parseClientMessage', () => {
     [{ type: 'hello', protocol: PROTOCOL_VERSION }],
     [{ type: 'hello', protocol: PROTOCOL_VERSION, session: 'abc' }],
     [{ type: 'createRoom', name: 'Mei', rules: { handSize: 5, drawUntilPlayable: true } }],
+    [{ type: 'createRoom', name: 'Mei', rules: {}, map: 'london-underground' }],
+    [{ type: 'createRoom', name: 'Mei', rules: {}, map: 'atlantis' }],
     [{ type: 'joinRoom', name: 'Ka Ho' }],
+    [{ type: 'setMap', map: 'hk-mtr' }],
+    [{ type: 'setMap', map: 'london-underground' }],
+    [{ type: 'setMap', map: 'atlantis' }],
     [{ type: 'setRules', rules: {} }],
     [{ type: 'addBot', seat: 3 }],
     [{ type: 'removeSeat', seat: 0 }],
@@ -44,6 +49,11 @@ describe('parseClientMessage', () => {
     ['an unknown action', j({ type: 'act', action: { type: 'win' } })],
     ['a play with no card', j({ type: 'act', action: { type: 'play' } })],
     ['a play with a bad extra card', j({ type: 'act', action: { type: 'play', cardId: 'a', extraCardIds: [1] } })],
+    ['a setMap without a map', j({ type: 'setMap' })],
+    ['a non-string map', j({ type: 'setMap', map: 3 })],
+    ['an empty map', j({ type: 'setMap', map: '' })],
+    ['an over-long map', j({ type: 'setMap', map: 'x'.repeat(65) })],
+    ['a createRoom with a non-string map', j({ type: 'createRoom', name: 'Mei', rules: {}, map: ['hk-mtr'] })],
     ['an over-long card id', j({ type: 'act', action: { type: 'play', cardId: 'x'.repeat(65) } })],
   ])('rejects %s', (_, text) => {
     expect(parseClientMessage(text)).toBeNull();
@@ -55,9 +65,22 @@ describe('parseClientMessage', () => {
   });
 });
 
+describe('isKnownMap', () => {
+  it('knows every offered map', () => {
+    expect(isKnownMap('hk-mtr')).toBe(true);
+    expect(isKnownMap('london-underground')).toBe(true);
+  });
+
+  it('does not know other ids', () => {
+    expect(isKnownMap('atlantis')).toBe(false);
+    expect(isKnownMap('')).toBe(false);
+    expect(isKnownMap('toString')).toBe(false);
+  });
+});
+
 describe('parseServerMessage', () => {
   const seat = { id: 's1', name: 'Mei', kind: 'human', botNumber: 0, connected: true, standIn: false };
-  const room = { code: 'K7MX', phase: 'lobby', rules: { handSize: 7 }, hostSeat: 's1', seats: [seat, null, null, null], you: 's1' };
+  const room = { code: 'K7MX', phase: 'lobby', rules: { handSize: 7 }, map: 'london-underground', hostSeat: 's1', seats: [seat, null, null, null], you: 's1' };
 
   it.each([
     [{ type: 'welcome', code: 'K7MX', session: 'tok', seat: 's1' }],
@@ -77,6 +100,8 @@ describe('parseServerMessage', () => {
   it.each([
     ['an unknown error code', j({ type: 'error', code: 'oops' })],
     ['a room with the wrong number of seats', j({ type: 'room', room: { ...room, seats: [seat] } })],
+    ['a room without a map', j({ type: 'room', room: { ...room, map: undefined } })],
+    ['a room with a non-string map', j({ type: 'room', room: { ...room, map: 7 } })],
     ['a table without a view', j({ type: 'table', events: [] })],
     ['garbage', '}{'],
   ])('rejects %s', (_, text) => {

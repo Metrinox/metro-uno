@@ -1,6 +1,8 @@
 import { env } from 'cloudflare:workers';
 import { evictDurableObject, runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test';
+import { networkById } from '../src/data/networks';
 import { chooseAction } from '../src/engine/ai';
+import { buildDeck } from '../src/engine/cards';
 import { MAX_MESSAGE_BYTES, PROTOCOL_VERSION } from '../src/shared/protocol';
 import type { RoomState } from './room';
 import type { RoomObject } from './roomObject';
@@ -21,6 +23,34 @@ describe('room object', () => {
     expect(room.room.seats.map((s) => s?.name ?? null)).toEqual(['Mei', 'Ka Ho', null, null]);
     host.ws.close();
     guest.ws.close();
+  });
+
+  it('carries on a room stored before maps existed as a Hong Kong room', async () => {
+    const { host, code, session } = await createRoom('Mei');
+    host.send({ type: 'addBot', seat: 1 });
+    await host.next('room', (m) => m.room.seats[1]?.kind === 'bot');
+    host.ws.close();
+    const stub = stubFor(code);
+    // Rewrite the stored room as the previous server saved it: no `map` field.
+    await runInDurableObject(stub, async (_o: RoomObject, s) => {
+      const old: Partial<RoomState> = { ...(await s.storage.get<RoomState>('room')) };
+      delete old.map;
+      await s.storage.put('room', old);
+    });
+    await evictDurableObject(stub);
+    expect(await runInDurableObject(stub, (_o: RoomObject, s) => s.storage.get<RoomState>('room'))).not.toHaveProperty('map');
+
+    const back = await connect(`/rooms/${code}`, session);
+    expect((await back.next('room')).room.map).toBe('hk-mtr');
+    back.send({ type: 'start' });
+    const table = await back.next('table');
+    const hongKong = new Set(buildDeck(networkById('hk-mtr')!).map((c) => c.id));
+    expect(table.view.hand.length).toBeGreaterThan(0);
+    expect(table.view.hand.every((c) => hongKong.has(c.id))).toBe(true);
+    const saved = await runInDurableObject(stub, (_o: RoomObject, s) => s.storage.get<RoomState>('room'));
+    expect(saved?.map).toBe('hk-mtr');
+    expect(saved?.game?.lines).toEqual(networkById('hk-mtr')!.lines.map((l) => l.code));
+    back.ws.close();
   });
 
   it('keeps two rooms apart', async () => {

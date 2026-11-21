@@ -1,8 +1,10 @@
 import type { Card } from '../../engine/cards';
-import { cardLabel, stationName, textOn } from '../i18n/format';
+import { cardLabel, stationName, textOn, wildTheme } from '../i18n/format';
+import { localName } from '../i18n/i18n';
 import { useLang } from '../i18n/LangContext';
-import { network } from '../common/network';
+import { useNetwork } from '../common/NetworkContext';
 import { OctopusLogo } from './OctopusLogo';
+import { OysterArt } from './OysterArt';
 import { SkipIcon } from './SkipIcon';
 import { TerminusIcon } from './TerminusIcon';
 
@@ -10,6 +12,7 @@ const ACTION_ICON = { 'signal-fault': <SkipIcon />, terminus: <TerminusIcon />, 
 
 /** A line's colour band; merged lines show each label in its own colour. */
 function Band({ code }: { code: string }) {
+  const network = useNetwork();
   const labels = network.lineByCode[code]!.labels;
   return (
     <span className="card-band" data-line={code}>
@@ -24,6 +27,7 @@ function Band({ code }: { code: string }) {
 
 /** "⇢ ISL TWL": lines a walkway transfer can switch to. */
 function TransferMarker({ lines }: { lines: string[] }) {
+  const network = useNetwork();
   return (
     <span className="card-transfer" data-testid="card-transfer">
       <span aria-hidden>⇢</span>
@@ -60,9 +64,10 @@ interface Props {
 
 export function CardView({ card, size = 'hand', playable, highlight, onClick, testId }: Props) {
   const { lang, t } = useLang();
+  const network = useNetwork();
   const label = cardLabel(card, network, lang, t);
   const cls = ['card', `card-${size}`, `card-${card.kind}`];
-  if (card.kind === 'wild') cls.push(`card-${card.wild}`);
+  if (card.kind === 'wild') cls.push(`card-${card.wild}`, `card-art-${wildTheme(network, card.wild).art}`);
   if (playable) cls.push('is-playable');
   if (highlight) cls.push('is-drawn');
 
@@ -110,14 +115,25 @@ export function CardView({ card, size = 'hand', playable, highlight, onClick, te
       );
       break;
     case 'wild': {
-      if (card.wild === 'octopus') {
+      const theme = wildTheme(network, card.wild);
+      const name = localName(theme.name, lang);
+      if (theme.art === 'octopus') {
         body = (
           <>
             <span className="octopus-title" aria-hidden>
               八達通
             </span>
             <OctopusLogo className="octopus-logo" />
-            <Name>{t.wildName.octopus}</Name>
+            <Name>{name}</Name>
+          </>
+        );
+        break;
+      }
+      if (theme.art === 'oyster') {
+        body = (
+          <>
+            <OysterArt className="oyster-art" />
+            <Name>{name}</Name>
           </>
         );
         break;
@@ -127,9 +143,9 @@ export function CardView({ card, size = 'hand', playable, highlight, onClick, te
         <>
           <span className="card-wild-ring" style={{ background: `conic-gradient(${stops}, ${network.lines[0]!.colour})` }} />
           <span className="card-icon" aria-hidden>
-            +4
+            {card.wild === 'typhoon' ? '+4' : '★'}
           </span>
-          <Name>{t.wildName[card.wild]}</Name>
+          <Name>{name}</Name>
         </>
       );
       break;

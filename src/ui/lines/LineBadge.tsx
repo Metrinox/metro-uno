@@ -1,9 +1,10 @@
 import { lineName, textOn } from '../i18n/format';
 import { useLang } from '../i18n/LangContext';
-import { network } from '../common/network';
+import { useNetwork } from '../common/NetworkContext';
 
 export function LineBadge({ code, testId }: { code: string; testId?: string }) {
   const { lang } = useLang();
+  const network = useNetwork();
   const labels = network.lineByCode[code]!.labels;
   return (
     <span className="line-badge" data-testid={testId} data-line={code}>

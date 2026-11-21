@@ -1,6 +1,6 @@
-import type { Network } from '../../data/network';
-import type { Card } from '../../engine/cards';
-import type { Dict, Lang } from './i18n';
+import type { Network, WildTheme } from '../../data/network';
+import type { Card, WildType } from '../../engine/cards';
+import { localName, type Dict, type Lang } from './i18n';
 
 /** Black or white text, whichever reads better on `hex`. */
 export function textOn(hex: string): string {
@@ -19,11 +19,18 @@ export function lineCode(network: Network, code: string): string {
 }
 
 export function lineName(network: Network, code: string, lang: Lang): string {
-  return network.lineByCode[code]?.name[lang] ?? code;
+  const line = network.lineByCode[code];
+  return line ? localName(line.name, lang) : code;
 }
 
 export function stationName(network: Network, id: string, lang: Lang): string {
-  return network.stations[id]?.name[lang] ?? id;
+  const station = network.stations[id];
+  return station ? localName(station.name, lang) : id;
+}
+
+/** The network's theme for a wild role: `octopus` is the plain wild, `typhoon` the wild draw 4. */
+export function wildTheme(network: Network, wild: WildType): WildTheme {
+  return wild === 'octopus' ? network.wilds.wild : network.wilds.draw4;
 }
 
 /** Short name for a card, used in messages. */
@@ -36,7 +43,7 @@ export function cardName(card: Card, network: Network, lang: Lang, t: Dict): str
     case 'action':
       return `${lineCode(network, card.line)} ${t.actionName[card.action]}`;
     case 'wild':
-      return t.wildName[card.wild];
+      return localName(wildTheme(network, card.wild).name, lang);
   }
 }
 
@@ -58,7 +65,7 @@ export function cardLabel(card: Card, network: Network, lang: Lang, t: Dict): st
     case 'action':
       return `${t.actionName[card.action]}, ${lineName(network, card.line, lang)}`;
     case 'wild':
-      return t.wildName[card.wild];
+      return localName(wildTheme(network, card.wild).name, lang);
   }
 }
 

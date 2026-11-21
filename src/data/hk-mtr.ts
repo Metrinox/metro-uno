@@ -16,6 +16,10 @@ import type { NetworkDef } from './network';
 export const hongKongMtr: NetworkDef = {
   id: 'hk-mtr',
   name: { en: 'Hong Kong MTR', zh: '香港港鐵' },
+  wilds: {
+    wild: { name: { en: 'Octopus', zh: '八達通' }, art: 'octopus' },
+    draw4: { name: { en: 'Typhoon Signal No. 8', zh: '八號風球' }, art: 'ring' },
+  },
   stations: {
     // Island Line
     'kennedy-town': { en: 'Kennedy Town', zh: '堅尼地城' },

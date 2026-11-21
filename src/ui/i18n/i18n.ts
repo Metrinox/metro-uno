@@ -1,5 +1,5 @@
 import type { LocalizedName } from '../../data/network';
-import type { ActionType, WildType } from '../../engine/cards';
+import type { ActionType } from '../../engine/cards';
 import type { RejectReason } from '../../engine/game';
 import type { ErrorCode, LobbyRejectReason } from '../../shared/protocol';
 
@@ -12,9 +12,9 @@ type Who = { who: string; you: boolean };
 
 export interface Dict {
   title: string;
-  subtitle: string;
   opponents: string;
   language: string;
+  map: string;
   theme: string;
   light: string;
   dark: string;
@@ -85,7 +85,6 @@ export interface Dict {
   endOn: string;
   play: string;
   actionName: Record<ActionType, string>;
-  wildName: Record<WildType, string>;
   rejected: Record<RejectReason, string>;
   online: OnlineDict;
   ev: {
@@ -147,9 +146,9 @@ function ordinal(n: number): string {
 
 const en: Dict = {
   title: 'Metro Uno',
-  subtitle: 'Hong Kong MTR',
   opponents: 'Computer opponents',
   language: 'Language',
+  map: 'Map',
   theme: 'Appearance',
   light: 'Light',
   dark: 'Dark',
@@ -218,7 +217,6 @@ const en: Dict = {
   endOn: 'Finish on (sets the line)',
   play: 'Play',
   actionName: { 'signal-fault': 'Signal Fault', terminus: 'Terminus', 'rush-hour': 'Rush Hour' },
-  wildName: { octopus: 'Octopus', typhoon: 'Typhoon Signal No. 8' },
   rejected: {
     'game-over': 'The round is over.',
     'not-your-turn': 'Wait for your turn.',
@@ -280,6 +278,7 @@ const en: Dict = {
       'seat-taken': 'That seat is taken.',
       'seat-empty': 'That seat is already empty.',
       'not-playing': 'No round is in progress.',
+      'unknown-map': 'That map is not available.',
     },
   },
   ev: {
@@ -299,9 +298,9 @@ const en: Dict = {
 
 const zh: Dict = {
   title: '地鐵 UNO',
-  subtitle: '香港港鐵',
   opponents: '電腦對手',
   language: '語言',
+  map: '地圖',
   theme: '外觀',
   light: '淺色',
   dark: '深色',
@@ -370,7 +369,6 @@ const zh: Dict = {
   endOn: '最後一張（決定路綫）',
   play: '出牌',
   actionName: { 'signal-fault': '訊號故障', terminus: '總站', 'rush-hour': '繁忙時間' },
-  wildName: { octopus: '八達通', typhoon: '八號風球' },
   rejected: {
     'game-over': '這局已經結束。',
     'not-your-turn': '請等你的回合。',
@@ -432,6 +430,7 @@ const zh: Dict = {
       'seat-taken': '這個座位已有人。',
       'seat-empty': '這個座位已經是空的。',
       'not-playing': '目前沒有進行中的牌局。',
+      'unknown-map': '沒有這個地圖。',
     },
   },
   ev: {
@@ -451,8 +450,9 @@ const zh: Dict = {
 
 export const dictionaries: Record<Lang, Dict> = { en, zh };
 
+/** The name in `lang`, or the English name when it has no translation. */
 export function localName(name: LocalizedName, lang: Lang): string {
-  return name[lang];
+  return name[lang] ?? name.en;
 }
 
 /** Reads the saved language; any storage failure falls back to English. */

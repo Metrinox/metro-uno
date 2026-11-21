@@ -9,7 +9,8 @@ import {
   type RejectReason,
   viewFor,
 } from '../../engine/game';
-import { network } from '../common/network';
+import type { Network } from '../../data/network';
+import { networkOrDefault } from '../../data/networks';
 import type { LogEntry, LogItem, SeatInfo, TableController } from '../game/tableController';
 
 export const HUMAN_ID = 'p0';
@@ -18,6 +19,8 @@ export interface GameConfig {
   opponents: number;
   seed: string;
   rules: HouseRules;
+  /** Id of the map the round is played on (see `NETWORKS`); unknown ids fall back to Hong Kong. */
+  map: string;
 }
 
 export interface LocalGameOptions {
@@ -25,7 +28,7 @@ export interface LocalGameOptions {
   aiDelay: [number, number];
 }
 
-function newGame(config: GameConfig): GameState {
+function newGame(config: GameConfig, network: Network): GameState {
   const players = [
     { id: HUMAN_ID, name: 'You', isHuman: true },
     ...Array.from({ length: config.opponents }, (_, i) => ({ id: `ai${i + 1}`, name: `Computer ${i + 1}`, isHuman: false })),
@@ -41,7 +44,7 @@ declare global {
 
 /** Runs one single-player round in the browser. Remount (change the React key) to start a new round. */
 export function useLocalGame(config: GameConfig, { aiDelay }: LocalGameOptions): TableController {
-  const [state, setState] = useState<GameState>(() => newGame(config));
+  const [state, setState] = useState<GameState>(() => newGame(config, networkOrDefault(config.map)));
   const [log, setLog] = useState<LogItem[]>([]);
   const stateRef = useRef(state);
   const nextLogId = useRef(1);

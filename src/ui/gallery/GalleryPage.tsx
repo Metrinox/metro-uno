@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
+import type { Network } from '../../data/network';
 import { buildDeck, type Card } from '../../engine/cards';
 import { CardView } from '../cards/CardView';
 import { lineName } from '../i18n/format';
@@ -7,7 +8,7 @@ import { ThemeToggle } from '../theme/ThemeToggle';
 import { useLang } from '../i18n/LangContext';
 import { LineBadge } from '../lines/LineBadge';
 import { LineStrip } from '../lines/LineStrip';
-import { network } from '../common/network';
+import { useNetwork } from '../common/NetworkContext';
 
 interface Group {
   key: string;
@@ -16,7 +17,7 @@ interface Group {
 }
 
 /** Every card, grouped: each line's stations (in line order) and actions, then interchanges, then wilds. */
-function groupCards(deck: Card[]): Group[] {
+function groupCards(deck: Card[], network: Network): Group[] {
   const groups: Group[] = network.lines.map((line) => {
     const order = new Map(line.stops.map((s, i) => [s.stationId, i]));
     const stations = deck
@@ -33,8 +34,9 @@ function groupCards(deck: Card[]): Group[] {
 /** Reference page at /gallery: every line and every card, for reviewing the artwork. */
 export function GalleryPage() {
   const { lang, t } = useLang();
-  const deck = useMemo(() => buildDeck(network), []);
-  const groups = useMemo(() => groupCards(deck), [deck]);
+  const network = useNetwork();
+  const deck = useMemo(() => buildDeck(network), [network]);
+  const groups = useMemo(() => groupCards(deck, network), [deck, network]);
 
   return (
     <main className="gallery">

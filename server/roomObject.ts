@@ -32,6 +32,15 @@ export async function sha256(text: string): Promise<string> {
 }
 
 /**
+ * Fills in fields added since a room was stored, so a room saved by the previous
+ * deploy carries on. Rooms stored before maps existed are Hong Kong rooms.
+ */
+export function upgradeState(stored: RoomState): RoomState {
+  const state = stored as Omit<RoomState, 'map'> & { map?: string };
+  return { ...state, map: state.map ?? 'hk-mtr' };
+}
+
+/**
  * One online room (design.md §2, §5). A thin adapter around the pure `Room`:
  * it loads and saves the room's state, accepts hibernatable sockets, and turns
  * socket events and alarms into `Room` calls.
@@ -50,7 +59,7 @@ export class RoomObject extends DurableObject<Env> {
         await ctx.storage.deleteAll();
         await ctx.storage.deleteAlarm();
       } else {
-        this.state = stored ?? null;
+        this.state = stored ? upgradeState(stored) : null;
       }
     });
     // Heartbeats are answered without waking the object.

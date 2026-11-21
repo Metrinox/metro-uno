@@ -1,5 +1,7 @@
 import { layoutLine } from './lineLayout';
-import { network } from '../common/network';
+import { networkOrDefault } from '../../data/networks';
+
+const network = networkOrDefault('hk-mtr');
 
 const layout = (code: string) => layoutLine(network.lineByCode[code]!);
 const at = (code: string, id: string) => layout(code).stops.find((s) => s.stationId === id)!;
