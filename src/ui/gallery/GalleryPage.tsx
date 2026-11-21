@@ -1,5 +1,6 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { Network } from '../../data/network';
+import { NETWORKS, networkOrDefault } from '../../data/networks';
 import { buildDeck, type Card } from '../../engine/cards';
 import { CardView } from '../cards/CardView';
 import { lineName } from '../i18n/format';
@@ -8,7 +9,8 @@ import { ThemeToggle } from '../theme/ThemeToggle';
 import { useLang } from '../i18n/LangContext';
 import { LineBadge } from '../lines/LineBadge';
 import { LineStrip } from '../lines/LineStrip';
-import { useNetwork } from '../common/NetworkContext';
+import { NetworkProvider, useNetwork } from '../common/NetworkContext';
+import { localName } from '../i18n/i18n';
 
 interface Group {
   key: string;
@@ -31,9 +33,57 @@ function groupCards(deck: Card[], network: Network): Group[] {
   return [...groups, { key: 'interchanges', title: null, cards: interchanges }, { key: 'wilds', title: null, cards: wilds }];
 }
 
-/** Reference page at /gallery: every line and every card, for reviewing the artwork. */
+/** The map named by the page's `?map=` link parameter (Hong Kong when missing or unknown). */
+function mapFromUrl(): Network {
+  return networkOrDefault(new URLSearchParams(window.location.search).get('map'));
+}
+
+/** Writes the chosen map into `?map=`, keeping the rest of the link, so a reload or shared link keeps it. */
+function writeMapToUrl(id: string) {
+  const url = new URL(window.location.href);
+  url.searchParams.set('map', id);
+  window.history.replaceState(window.history.state, '', url);
+}
+
+/** Reference page at /gallery: every line and every card of the chosen map, for reviewing the artwork. */
 export function GalleryPage() {
+  const [network, setNetwork] = useState(mapFromUrl);
+  const choose = (n: Network) => {
+    setNetwork(n);
+    writeMapToUrl(n.id);
+  };
+  return (
+    <NetworkProvider network={network}>
+      <GalleryContent onChooseMap={choose} />
+    </NetworkProvider>
+  );
+}
+
+/** Segmented control choosing which map the gallery shows. */
+function MapMenu({ onChoose }: { onChoose: (network: Network) => void }) {
   const { lang, t } = useLang();
+  const current = useNetwork();
+  return (
+    <div className="segmented gallery-map-menu" role="radiogroup" aria-label={t.map} data-testid="gallery-map-menu">
+      {NETWORKS.map((n) => (
+        <label key={n.id} className={n.id === current.id ? 'is-selected' : undefined}>
+          <input
+            type="radio"
+            name="gallery-map"
+            value={n.id}
+            checked={n.id === current.id}
+            onChange={() => onChoose(n)}
+            data-testid={`gallery-map-${n.id}`}
+          />
+          {localName(n.name, lang)}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function GalleryContent({ onChooseMap }: { onChooseMap: (network: Network) => void }) {
+  const { t } = useLang();
   const network = useNetwork();
   const deck = useMemo(() => buildDeck(network), [network]);
   const groups = useMemo(() => groupCards(deck, network), [deck, network]);
@@ -41,9 +91,12 @@ export function GalleryPage() {
   return (
     <main className="gallery">
       <header className="gallery-header">
-        <div>
-          <h1>{t.galleryTitle}</h1>
-          <p className="subtitle">{t.galleryIntro(deck.length, network.lines.length)}</p>
+        <div className="gallery-header-main">
+          <div className="gallery-title-row">
+            <h1>{t.galleryTitle}</h1>
+            <MapMenu onChoose={onChooseMap} />
+          </div>
+          <p className="subtitle" data-testid="gallery-intro">{t.galleryIntro(deck.length, network.lines.length)}</p>
         </div>
         <div className="gallery-header-controls">
           <ThemeToggle />
@@ -61,7 +114,7 @@ export function GalleryPage() {
             <li key={line.code} className="gallery-line" data-testid="gallery-line" data-line={line.code}>
               <div className="gallery-line-head">
                 <LineBadge code={line.code} />
-                <span className="gallery-line-alt">{lineName(network, line.code, lang === 'en' ? 'zh' : 'en')}</span>
+                <AltLineName code={line.code} />
                 <span className="gallery-line-count">{t.stationCount(line.stops.length)}</span>
               </div>
               <LineStrip line={line.code} highlightStation={null} />
@@ -88,4 +141,13 @@ export function GalleryPage() {
       </section>
     </main>
   );
+}
+
+/** The line's name in the other language, left out when it would repeat the shown name (e.g. London has no Chinese names). */
+function AltLineName({ code }: { code: string }) {
+  const { lang } = useLang();
+  const network = useNetwork();
+  const shown = lineName(network, code, lang);
+  const alt = lineName(network, code, lang === 'en' ? 'zh' : 'en');
+  return alt === shown ? null : <span className="gallery-line-alt">{alt}</span>;
 }

@@ -1193,6 +1193,60 @@ button.card {
 .gallery-header .subtitle {
   margin: 4px 0 0;
 }
+.gallery-header-main {
+  flex: 1;
+  min-width: 0;
+}
+/* Title and map menu side by side; the menu drops below the title on narrow screens. */
+.gallery-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.gallery-map-menu {
+  flex: 0 1 auto;
+}
+.gallery-map-menu label {
+  flex: 1 1 auto;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+/* Phones: title and toggles on the first row, then the menu full width, then the intro. */
+@media (max-width: 559px) {
+  .gallery-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'title controls' 'menu menu' 'intro intro';
+    gap: 10px 12px;
+  }
+  .gallery-header-main,
+  .gallery-title-row {
+    display: contents;
+  }
+  .gallery-header h1 {
+    grid-area: title;
+    align-self: center;
+  }
+  .gallery-header-controls {
+    grid-area: controls;
+  }
+  .gallery-map-menu {
+    grid-area: menu;
+    min-width: 0;
+  }
+  .gallery-header .subtitle {
+    grid-area: intro;
+    margin: 0;
+  }
+  .gallery-map-menu label {
+    min-width: 0;
+    padding: 4px 8px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+  }
+}
 .gallery-back {
   color: var(--accent);
   font-weight: 600;
