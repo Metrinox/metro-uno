@@ -62,7 +62,7 @@ Validation fails in any of these cases:
 
 ### 2. London data
 - `SSR` is replaced by three single-label lines in TfL's colours:
-  - `CIR` (#FFD300): the trunk runs Hammersmith (H&C) → Aldgate, so Aldgate is level with Liverpool Street, and the southern half is the loop branch from Aldgate back to Paddington;
+  - `CIR` (#FFD300): the trunk runs Hammersmith (H&C) → Aldgate, so Aldgate is level with Liverpool Street, and the southern half is the loop branch from Aldgate back to Paddington. A `close` drawing hint on the loop keeps the stations from Paddington to Great Portland Street one column apart while the rest of the ring is spread out;
   - `H&C` (#F3A9BB): Hammersmith (H&C) → West Ham;
   - `MET` (#9B0056): Finchley Road → Aldgate, numbered from its north end.
 - Line order follows TfL's alphabetical list: BAK, CEN, CIR, DIS, H&C, JUB, MET, NOR, PIC, VIC.
@@ -109,7 +109,7 @@ Validation fails in any of these cases:
 - **`LineStrip`:**
   - It takes `lines: string[]` and always draws one line, so the strip is never taller than a single line's.
   - With several current lines it draws the first (in `sharedTrack.lines` order) and shows a small tab per current line above the strip (e.g. CIR | DIS). Choosing a tab draws that line. The choice is local display state and resets to the first line whenever the current lines change.
-  - `lineLayout` is unchanged.
+  - `lineLayout` changes only to follow the Circle's `close` hint.
   - When the table would not fit the screen (the District below its tabs at 360×640), the strip gives up the missing height and scrolls inside its own box, centred on the top card's station.
 
   *Alternative:* a merged map drawing every current line in one strip. Rejected: those maps were up to 55 stations across several rows and pushed the hand off a 360×640 screen.

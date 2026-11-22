@@ -115,6 +115,9 @@ describe('line strip layout', () => {
       expect(pos('bayswater')).toMatchObject({ row: 1, col: pad.col + 1 });
       // …so the trunk between them is spread out to fit it, and nothing shares a cell.
       expect(ald.col - pad.col).toBe(17);
+      // The single spaces are all at the left, Paddington to Great Portland Street.
+      const ring = cir.stops.filter((s) => s.row === 0 && s.col >= pad.col).map((s) => s.col);
+      expect(ring.slice(1).map((c, i) => c - ring[i]!)).toEqual([1, 1, 1, 2, 2, 2, 2, 2, 2, 2]);
       expect(new Set(cir.stops.map((s) => `${s.col},${s.row}`)).size).toBe(cir.stops.length);
       expect(pos('royal-oak').col + 1).toBe(pad.col);
       // Only Circle stations.

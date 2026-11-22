@@ -98,6 +98,7 @@ The working tree holds an implementation of this change's earlier version (numbe
 
   Verify by screenshots showing no overlap, no sideways page scrolling, and the whole table visible without scrolling at 360×640.
 - [x] 3.7 Draw Aldgate level with Liverpool Street on the Circle's strip, with the southern loop leaving from Aldgate. Verify with the Circle cases in `london-underground.test.ts` and `lineLayout.test.ts`.
+- [x] 3.8 Put the Circle ring's one-column spaces at the left, from Paddington to Great Portland Street, and spread the rest to Aldgate, with a `close` drawing hint. Verify with the Circle case in `lineLayout.test.ts` and a `network.test.ts` case for a hint naming a station off the main route.
 
 ## 4. Final checks
 

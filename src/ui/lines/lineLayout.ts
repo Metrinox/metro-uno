@@ -55,9 +55,10 @@ export function layoutLine(line: Line): StripLayout {
   const branchIds = (b: number) => line.stops.filter((s) => s.branch === b).map((s) => s.stationId);
 
   // A loop that leaves the trunk and rejoins it further along in the direction it is
-  // drawn (e.g. the Circle's southern side, from Liverpool Street back to Paddington)
-  // is drawn as a ring: the trunk between its two ends is spread out until the loop's
-  // stations fit between them, so the track back to the trunk is a short step.
+  // drawn (e.g. the Circle's southern side, from Aldgate back to Paddington) is drawn
+  // as a ring: the trunk between its two ends is spread out until the loop's stations
+  // fit between them, so the track back to the trunk is a short step. Gaps the loop's
+  // `close` hint names are left alone, unless it names them all.
   const trunk = branchIds(0);
   const gaps = trunk.slice(1).map(() => 1);
   for (let b = 1; b < branchCount; b++) {
@@ -69,7 +70,10 @@ export function layoutLine(line: Line): StripLayout {
     const [lo, hi] = [Math.min(fi, ri), Math.max(fi, ri)];
     const need = branchIds(b).length + 1;
     let span = gaps.slice(lo, hi).reduce((n, g) => n + g, 0);
-    for (let g = lo; span < need; g = g + 1 < hi ? g + 1 : lo, span++) gaps[g]!++;
+    const all = Array.from({ length: hi - lo }, (_, i) => lo + i);
+    const open = all.filter((g) => !line.branchDraw[b]?.close.includes(trunk[g]!));
+    const spread = open.length > 0 ? open : all;
+    for (let i = 0; span < need; i = (i + 1) % spread.length, span++) gaps[spread[i]!]!++;
   }
 
   for (let b = 0; b < branchCount; b++) {
@@ -86,7 +90,7 @@ export function layoutLine(line: Line): StripLayout {
     }
     const fork = line.branchFrom[b]!;
     const start = pos.get(fork)!;
-    const { toward, side } = line.branchDraw[b] ?? { toward: 'right', side: 'above' };
+    const { toward, side } = line.branchDraw[b] ?? { toward: 'right', side: 'above', close: [] };
     const dx = toward === 'left' ? -1 : 1;
     const dy = side === 'below' ? 1 : -1;
     const cols = ids.map((_, i) => start.col + dx * (1 + i));

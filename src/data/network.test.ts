@@ -97,6 +97,12 @@ describe('loadNetwork', () => {
     expect(() => loadNetwork(bad)).toThrow(/branch from "a1"/);
   });
 
+  it('rejects a drawing hint that keeps a station close which is not on the main route', () => {
+    const [a, b] = tinyDef.lines;
+    const bad = { ...tinyDef, lines: [a!, { ...b!, branches: [{ ...b!.branches![0]!, draw: { close: ['a1'] } }] }] };
+    expect(() => loadNetwork(bad)).toThrow(/Line B keeps "a1" close/);
+  });
+
   it('gives every station a card number, and none to an ordinary interchange', () => {
     expect(net.stations.a1!.number).toBe(1);
     expect(net.stations.b3!.number).toBe(net.stations.b3!.numbers.B);

@@ -237,7 +237,8 @@ export const londonUnderground: NetworkDef = {
             'westminster', 'st-jamess-park', 'victoria', 'sloane-square', 'south-kensington', 'gloucester-road',
             'high-street-kensington', 'notting-hill-gate', 'bayswater',
           ],
-          draw: { toward: 'left', side: 'below' },
+          // Paddington to Great Portland Street stay close together; the rest is spread out.
+          draw: { toward: 'left', side: 'below', close: ['paddington', 'edgware-road-circle', 'baker-street'] },
         },
       ],
     },

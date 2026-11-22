@@ -27,6 +27,11 @@ export interface BranchDef {
 export interface BranchDraw {
   toward?: 'left' | 'right';
   side?: 'above' | 'below';
+  /**
+   * For a loop drawn as a ring: trunk stations kept next to the station after them
+   * while the rest of the trunk between the loop's ends is spread out. Defaults to none.
+   */
+  close?: string[];
 }
 
 /** One display label for a line: a short code in its own colour. */
@@ -199,7 +204,7 @@ function buildRoute(owner: string, route: RouteDef, known: Record<string, Locali
   const segments: string[][] = [route.trunk, ...(route.branches ?? []).map((b) => b.stations)];
   const branchFrom: (string | null)[] = [null];
   const branchTo: (string | null)[] = [null];
-  const branchDraw: Required<BranchDraw>[] = [{ toward: 'right', side: 'above' }];
+  const branchDraw: Required<BranchDraw>[] = [{ toward: 'right', side: 'above', close: [] }];
 
   const add = (id: string) => {
     if (!(id in known)) throw new NetworkError(`${owner} references unknown station "${id}"`);
@@ -217,7 +222,11 @@ function buildRoute(owner: string, route: RouteDef, known: Record<string, Locali
     branch.stations.forEach(add);
     branchFrom.push(branch.from);
     branchTo.push(branch.to ?? null);
-    branchDraw.push({ toward: branch.draw?.toward ?? 'right', side: branch.draw?.side ?? 'above' });
+    const close = branch.draw?.close ?? [];
+    for (const id of close) {
+      if (!route.trunk.includes(id)) throw new NetworkError(`${owner} keeps "${id}" close, which is not on its main route`);
+    }
+    branchDraw.push({ toward: branch.draw?.toward ?? 'right', side: branch.draw?.side ?? 'above', close });
   }
   for (const b of route.branches ?? []) {
     if (b.to === undefined) continue;
