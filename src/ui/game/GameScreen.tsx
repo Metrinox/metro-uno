@@ -204,7 +204,7 @@ export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }
         </button>
       </section>
 
-      <LineStrip line={view.currentLines[0]!} highlightStation={highlightStation} />
+      <LineStrip lines={view.currentLines} highlightStation={highlightStation} />
 
       <section className="status">
         {myPlace > 0 && !ended && (

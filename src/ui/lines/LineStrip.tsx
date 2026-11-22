@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { stationName } from '../i18n/format';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { lineName, stationName, textOn } from '../i18n/format';
 import { useLang } from '../i18n/LangContext';
 import { localName } from '../i18n/i18n';
 import { layoutLine } from './lineLayout';
@@ -37,11 +37,20 @@ function wrapName(name: string): string[] {
   return best;
 }
 
-/** The current line's stations, branches at their forks, with the top card's station highlighted. */
-export function LineStrip({ line, highlightStation }: { line: string; highlightStation: string | null }) {
+/**
+ * The current line's stations, branches at their forks, with the top card's station
+ * highlighted. With several current lines it draws one at a time, the first to begin
+ * with, and a tab per line switches between them.
+ */
+export function LineStrip({ lines, highlightStation }: { lines: string[]; highlightStation: string | null }) {
   const { lang, t } = useLang();
   const network = useNetwork();
-  const def = network.lineByCode[line]!;
+  // The chosen tab goes back to the first line whenever the current lines change.
+  const key = lines.join('+');
+  const [chosen, setChosen] = useState({ key, code: lines[0]! });
+  if (chosen.key !== key) setChosen({ key, code: lines[0]! });
+  const shown = chosen.key === key ? chosen.code : lines[0]!;
+  const def = network.lineByCode[shown]!;
   const layout = useMemo(() => layoutLine(def), [def]);
   const scroller = useRef<HTMLDivElement>(null);
 
@@ -81,9 +90,9 @@ export function LineStrip({ line, highlightStation }: { line: string; highlightS
     const p = highlightStation ? where.get(highlightStation) : undefined;
     // Scroll only the strip itself, never the page.
     el.scrollLeft = p ? p.x - el.clientWidth / 2 : 0;
-  }, [line, highlightStation, where]);
+  }, [def, highlightStation, where]);
 
-  return (
+  const strip = (
     <div
       className="line-strip"
       ref={scroller}
@@ -162,5 +171,30 @@ export function LineStrip({ line, highlightStation }: { line: string; highlightS
         })}
       </svg>
     </div>
+  );
+  if (lines.length === 1) return strip;
+  return (
+    <>
+      <div className="strip-tabs" role="group" aria-label={t.linesHeading} data-testid="strip-tabs">
+        {lines.map((code) => {
+          const { colour } = network.lineByCode[code]!;
+          return (
+            <button
+              key={code}
+              type="button"
+              className="strip-tab"
+              aria-pressed={code === shown}
+              aria-label={lineName(network, code, lang)}
+              onClick={() => setChosen({ key, code })}
+              data-line={code}
+              style={code === shown ? { background: colour, borderColor: colour, color: textOn(colour) } : { borderColor: colour }}
+            >
+              {code}
+            </button>
+          );
+        })}
+      </div>
+      {strip}
+    </>
   );
 }

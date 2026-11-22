@@ -117,7 +117,7 @@ function GalleryContent({ onChooseMap }: { onChooseMap: (network: Network) => vo
                 <AltLineName code={line.code} />
                 <span className="gallery-line-count">{t.stationCount(line.stops.length)}</span>
               </div>
-              <LineStrip line={line.code} highlightStation={null} />
+              <LineStrip lines={[line.code]} highlightStation={null} />
             </li>
           ))}
         </ul>

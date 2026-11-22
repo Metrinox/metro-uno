@@ -58,7 +58,7 @@ The working tree holds an implementation of this change's earlier version (numbe
 
 ## 3. Display
 
-- [ ] 3.1 Make `LineStrip` take `lines: string[]` and draw one current line at a time, the first in shared-track order, with a tab per current line to switch (design decision 5). Verify with `lineLayout.test.ts` cases:
+- [x] 3.1 Make `LineStrip` take `lines: string[]` and draw one current line at a time, the first in shared-track order, with a tab per current line to switch (design decision 5). Verify with `lineLayout.test.ts` cases:
   - the Circle has its loop and no Finchley Road or Whitechapel;
   - the Metropolitan runs Finchley Road to Aldgate, numbered 1–5;
   - Sloane Square is a numbered stop on the District;

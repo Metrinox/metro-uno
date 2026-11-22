@@ -98,25 +98,36 @@ describe('line strip layout', () => {
     expect(new Set(nor.stops.map((s) => `${s.col},${s.row}`)).size).toBe(nor.stops.length);
   });
 
-  it('draws the Circle as a ring under the trunk between Paddington and Liverpool Street', () => {
-    const ssr = layoutLine(networkOrDefault('london-underground').lineByCode.SSR!);
-    const pos = (id: string) => ssr.stops.find((s) => s.stationId === id)!;
-    const [pad, lst] = [pos('paddington'), pos('liverpool-street')];
-    // The loop runs below the trunk from just left of Liverpool Street to just right of Paddington…
-    expect(pos('aldgate')).toMatchObject({ row: 1, col: lst.col - 1 });
-    expect(pos('bayswater')).toMatchObject({ row: 1, col: pad.col + 1 });
-    // …so the trunk between them is spread out to fit it, and nothing shares a cell.
-    expect(lst.col - pad.col).toBe(18);
-    expect(new Set(ssr.stops.map((s) => `${s.col},${s.row}`)).size).toBe(ssr.stops.length);
-    // Stations outside the ring keep their usual spacing.
-    expect(pos('royal-oak').col + 1).toBe(pad.col);
-    expect(pos('aldgate-east').col).toBe(lst.col + 1);
-  });
+  describe('London subsurface lines', () => {
+    const lu = networkOrDefault('london-underground');
+    const strip = (code: string) => layoutLine(lu.lineByCode[code]!);
+    const posIn = (l: ReturnType<typeof strip>) => (id: string) => l.stops.find((s) => s.stationId === id)!;
 
-  it('draws the Metropolitan branch to Finchley Road heading left from Baker Street', () => {
-    const ssr = layoutLine(networkOrDefault('london-underground').lineByCode.SSR!);
-    const pos = (id: string) => ssr.stops.find((s) => s.stationId === id)!;
-    expect(pos('finchley-road')).toMatchObject({ row: -1, col: pos('baker-street').col - 1 });
+    it('draws the Circle as a ring under the trunk between Paddington and Liverpool Street', () => {
+      const cir = strip('CIR');
+      const pos = posIn(cir);
+      const [pad, lst] = [pos('paddington'), pos('liverpool-street')];
+      // The loop runs below the trunk from just left of Liverpool Street to just right of Paddington…
+      expect(pos('aldgate')).toMatchObject({ row: 1, col: lst.col - 1 });
+      expect(pos('bayswater')).toMatchObject({ row: 1, col: pad.col + 1 });
+      // …so the trunk between them is spread out to fit it, and nothing shares a cell.
+      expect(lst.col - pad.col).toBe(18);
+      expect(new Set(cir.stops.map((s) => `${s.col},${s.row}`)).size).toBe(cir.stops.length);
+      expect(pos('royal-oak').col + 1).toBe(pad.col);
+      // Only Circle stations.
+      expect(cir.stops.some((s) => s.stationId === 'finchley-road' || s.stationId === 'whitechapel')).toBe(false);
+    });
+
+    it('draws the Metropolitan from Finchley Road to Aldgate, numbered 1 to 5', () => {
+      const met = strip('MET');
+      expect(met.stops.map((s) => s.stationId)).toEqual(lu.lineByCode.MET!.stops.map((s) => s.stationId));
+      expect(met.stops.map((s) => s.number)).toEqual([null, null, 1, 2, null, 3, 4, null, null, 5]);
+      expect(met.minRow).toBe(0);
+    });
+
+    it('shows Sloane Square as a numbered stop on the District', () => {
+      expect(posIn(strip('DIS'))('sloane-square').number).toBe(3);
+    });
   });
 
   it('keeps branches without a draw hint above the trunk, heading right', () => {
