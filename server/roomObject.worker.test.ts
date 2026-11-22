@@ -53,6 +53,56 @@ describe('room object', () => {
     back.ws.close();
   });
 
+  /** Starts a round with a computer player, then rewrites the stored round with `edit` and reloads the room. */
+  async function storedRound(edit: (stored: RoomState & { game: Record<string, unknown> }) => void) {
+    const { host, code, session } = await createRoom('Mei');
+    host.send({ type: 'addBot', seat: 1 });
+    await host.next('room', (m) => m.room.seats[1]?.kind === 'bot');
+    host.send({ type: 'start' });
+    await host.next('table');
+    host.ws.close();
+    const stub = stubFor(code);
+    await runInDurableObject(stub, async (_o: RoomObject, s) => {
+      const stored = (await s.storage.get<RoomState>('room'))!;
+      edit(stored as RoomState & { game: Record<string, unknown> });
+      await s.storage.put('room', stored);
+    });
+    await evictDurableObject(stub);
+    return { stub, back: await connect(`/rooms/${code}`, session) };
+  }
+
+  it('carries on a round stored with one current line', async () => {
+    let line = '';
+    const { back } = await storedRound((stored) => {
+      line = stored.game!.currentLines[0]!;
+      const game = stored.game as Record<string, unknown>;
+      game.currentLine = line;
+      delete game.currentLines;
+      delete game.sharedLines;
+    });
+    expect((await back.next('room')).room.phase).toBe('playing');
+    const table = await back.next('table');
+    expect(table.view.currentLines).toEqual([line]);
+    expect(table.view.sharedLines).toEqual([]);
+    back.ws.close();
+  });
+
+  it('ends a stored London round that has a merged-line card, keeping its players', async () => {
+    const { stub, back } = await storedRound((stored) => {
+      stored.map = 'london-underground';
+      const game = stored.game as Record<string, unknown> & { players: { hand: unknown[] }[] };
+      game.players[0]!.hand[0] = { id: 'act:terminus:SSR', kind: 'action', action: 'terminus', line: 'SSR' };
+      game.currentLine = 'SSR';
+      delete game.currentLines;
+    });
+    const room = (await back.next('room')).room;
+    expect(room.phase).toBe('lobby');
+    expect(room.seats.map((seat) => seat?.kind ?? null)).toEqual(['human', 'bot', null, null]);
+    const saved = await runInDurableObject(stub, (_o: RoomObject, s) => s.storage.get<RoomState>('room'));
+    expect(saved?.game ?? null).toBeNull();
+    back.ws.close();
+  });
+
   it('keeps two rooms apart', async () => {
     const a = await createRoom('Mei');
     const b = await createRoom('Sam');

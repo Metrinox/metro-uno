@@ -1,5 +1,8 @@
 import { DurableObject } from 'cloudflare:workers';
 import { MAX_MESSAGE_BYTES, parseClientMessage, PING_TEXT, PONG_TEXT } from '../src/shared/protocol';
+import { networkOrDefault } from '../src/data/networks';
+import { cardLines, type Card } from '../src/engine/cards';
+import type { GameState } from '../src/engine/game';
 import { closedState, Room, STATE_VERSION, type Conn, type MessageContext, type Outcome, type RoomState } from './room';
 
 /** What each hibernatable socket remembers about itself (survives hibernation). */
@@ -37,7 +40,38 @@ export async function sha256(text: string): Promise<string> {
  */
 export function upgradeState(stored: RoomState): RoomState {
   const state = stored as Omit<RoomState, 'map'> & { map?: string };
-  return { ...state, map: state.map ?? 'hk-mtr' };
+  return upgradeRound({ ...state, map: state.map ?? 'hk-mtr' });
+}
+
+/** A round as saved before several lines could be current: one `currentLine`, no `sharedLines`. */
+type StoredGame = Omit<GameState, 'currentLines' | 'sharedLines'> &
+  Partial<Pick<GameState, 'currentLines' | 'sharedLines'>> & { currentLine?: string };
+
+/**
+ * Gives a stored round `currentLines` and `sharedLines`. A round that names a line
+ * the map no longer has (London's merged `SSR`) is ended, and the room returns to
+ * its lobby with its players.
+ */
+function upgradeRound(state: RoomState): RoomState {
+  const stored = state.game as StoredGame | null;
+  if (!stored) return state;
+  const { currentLine, ...rest } = stored;
+  const game: GameState = { ...rest, currentLines: rest.currentLines ?? [currentLine!], sharedLines: rest.sharedLines ?? [] };
+
+  const network = networkOrDefault(state.map);
+  const known = (line: string) => line in network.lineByCode;
+  const cards = [...game.drawPile, ...game.discard, ...game.players.flatMap((p) => p.hand)];
+  const cardKnown = (c: Card) => cardLines(c).every(known) && ('transferLines' in c ? (c.transferLines ?? []).every(known) : true);
+  if (game.lines.every(known) && game.currentLines.every(known) && cards.every(cardKnown)) return { ...state, game };
+
+  return {
+    ...state,
+    phase: 'lobby',
+    game: null,
+    moves: 0,
+    seats: state.seats.map((s) => (s && s.departed ? null : s)),
+    deadlines: { ...state.deadlines, ai: null },
+  };
 }
 
 /**

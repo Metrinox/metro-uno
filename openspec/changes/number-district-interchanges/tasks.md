@@ -42,7 +42,7 @@ The working tree holds an implementation of this change's earlier version (numbe
   - "Line action plays".
 - [x] 2.4 Check same-number groups that end on a multi-line card. Verify with a `game.test.ts` case for "Ending on a multi-line card".
 - [x] 2.5 Score options of several lines in the AI's line choice (`src/engine/ai.ts`). Verify with an `ai.test.ts` case for the "Shared-track option" scenario, and the existing Octopus case.
-- [ ] 2.6 Convert or end stored rounds on load (design decision 6, `server/room.ts`/`roomObject.ts`), in its own commit. Verify with room tests:
+- [x] 2.6 Convert or end stored rounds on load (design decision 6, `server/room.ts`/`roomObject.ts`), in its own commit. Verify with room tests:
   - a stored Hong Kong round with `currentLine` loads with `currentLines` and plays on;
   - a stored London round with an `SSR` card loads into the lobby with its players.
 - [ ] 2.7 Update the London expectations in `simulate.test.ts` and run it. Verify that London rounds still finish within the limits. Record turns per round, share of plays by number, share of turns with no number face, and action-card share, against main's figures (354 turns, 12%, 38%).
