@@ -1,4 +1,5 @@
-import type { Card } from '../../engine/cards';
+import { cardLines, type Card } from '../../engine/cards';
+import { lineOptions } from '../../engine/game';
 import { cardLabel, stationName, textOn, wildTheme } from '../i18n/format';
 import { localName } from '../i18n/i18n';
 import { useLang } from '../i18n/LangContext';
@@ -10,12 +11,15 @@ import { TerminusIcon } from './TerminusIcon';
 
 const ACTION_ICON = { 'signal-fault': <SkipIcon />, terminus: <TerminusIcon />, 'rush-hour': '+2' } as const;
 
-/** A line's colour band; merged lines show each label in its own colour. */
-function Band({ code }: { code: string }) {
+/**
+ * One colour band for one or more lines, side by side: a merged line's labels, or
+ * the shared-track lines of a multi-line station or interchange.
+ */
+function Band({ codes }: { codes: string[] }) {
   const network = useNetwork();
-  const labels = network.lineByCode[code]!.labels;
+  const labels = codes.flatMap((code) => network.lineByCode[code]!.labels);
   return (
-    <span className="card-band" data-line={code}>
+    <span className="card-band" data-line={codes.join('+')}>
       {labels.map((l) => (
         <span key={l.code} className="card-band-part" style={{ background: l.colour, color: textOn(l.colour) }}>
           {l.code}
@@ -77,7 +81,7 @@ export function CardView({ card, size = 'hand', playable, highlight, onClick, te
       body = (
         <>
           <span className="card-head">
-            <Band code={card.line} />
+            <Band codes={cardLines(card)} />
             {card.transferLines && <TransferMarker lines={card.transferLines} />}
           </span>
           <span className="card-number">{card.number}</span>
@@ -90,8 +94,9 @@ export function CardView({ card, size = 'hand', playable, highlight, onClick, te
         <>
           <span className="card-head">
             <span className="card-bands">
-              {card.lines.map((l) => (
-                <Band key={l} code={l} />
+              {/* Shared-track lines share one band; every other line has its own. */}
+              {lineOptions(card.lines, network.sharedLines).map((codes) => (
+                <Band key={codes.join('+')} codes={codes} />
               ))}
             </span>
             {card.transferLines && <TransferMarker lines={card.transferLines} />}
@@ -106,7 +111,7 @@ export function CardView({ card, size = 'hand', playable, highlight, onClick, te
     case 'action':
       body = (
         <>
-          <Band code={card.line} />
+          <Band codes={[card.line]} />
           <span className="card-icon" aria-hidden>
             {ACTION_ICON[card.action]}
           </span>

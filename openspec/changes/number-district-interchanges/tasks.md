@@ -68,7 +68,7 @@ The working tree holds an implementation of this change's earlier version (numbe
   - Circle and District current shows the Circle with tabs CIR and DIS;
   - choosing DIS shows the District with Sloane Square highlighted;
   - one current line shows no tabs.
-- [ ] 3.2 Draw multi-line bands and shared-track interchange bands in `CardView.tsx` and `styles.css`, and remove the numbered-interchange markup and CSS. Verify with `CardView.test.tsx`:
+- [x] 3.2 Draw multi-line bands and shared-track interchange bands in `CardView.tsx` and `styles.css`, and remove the numbered-interchange markup and CSS. Verify with `CardView.test.tsx`:
   - Goldhawk Road shows CIR and H&C in one band, 2, and no interchange mark;
   - King's Cross shows one CIR/H&C/MET band, then NOR, PIC and VIC bands;
   - Admiralty is unchanged.

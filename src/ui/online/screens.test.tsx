@@ -267,7 +267,10 @@ describe('OnlineGame', () => {
     expect(shown).toHaveLength(3);
     expect(shown.every((id) => deck.has(id!))).toBe(true);
     const codes = new Set(london.lines.flatMap((l) => [l.code, ...l.labels.map((x) => x.code)]));
-    for (const band of document.querySelectorAll('[data-line]')) expect(codes.has(band.getAttribute('data-line')!)).toBe(true);
+    // A band may hold several shared-track lines ("CIR+DIS").
+    for (const band of document.querySelectorAll('[data-line]')) {
+      for (const code of band.getAttribute('data-line')!.split('+')) expect(codes.has(code), code).toBe(true);
+    }
     const stops = [...screen.getByTestId('line-strip').querySelectorAll('[data-station]')];
     expect(stops.length).toBeGreaterThan(0);
     for (const stop of stops) expect(london.stations[stop.getAttribute('data-station')!]).toBeDefined();

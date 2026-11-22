@@ -92,3 +92,38 @@ describe('CardView wild cards', () => {
     expect(show(wild(londonDeck, 'typhoon'), 'zh', london).querySelector('.card-name')?.textContent).toBe('地鐵罷工');
   });
 });
+
+describe('CardView subsurface cards', () => {
+  const london = networkById('london-underground')!;
+  const show = (id: string, net: Network) => {
+    const card = buildDeck(net).find((c) => c.id === id)!;
+    const { container } = render(
+      <NetworkProvider network={net}>
+        <LangProvider initial="en">
+          <CardView card={card} />
+        </LangProvider>
+      </NetworkProvider>,
+    );
+    return container.querySelector('.card')!;
+  };
+  const bands = (card: Element) =>
+    [...card.querySelectorAll('.card-band')].map((b) => [...b.querySelectorAll('.card-band-part')].map((p) => p.textContent));
+
+  it('shows a multi-line station with its lines side by side in one band, its number and no interchange mark', () => {
+    const card = show('st:goldhawk-road', london);
+    expect(bands(card)).toEqual([['CIR', 'H&C']]);
+    expect(card.querySelector('.card-number')?.textContent).toBe('2');
+    expect(card.querySelector('.card-icon')).toBeNull();
+    expect(card.querySelector('.card-name')?.textContent).toBe('Goldhawk Road');
+  });
+
+  it('gives an interchange one band for its shared-track lines, then a band per other line', () => {
+    const card = show('st:kings-cross-st-pancras', london);
+    expect(bands(card)).toEqual([['CIR', 'H&C', 'MET'], ['NOR'], ['PIC'], ['VIC']]);
+    expect(card.querySelector('.card-icon')?.textContent?.trim()).toBe('⇄');
+  });
+
+  it('leaves Hong Kong interchanges with a band per line (Admiralty)', () => {
+    expect(bands(show('st:admiralty', network))).toEqual([['ISL'], ['TWL'], ['EAL'], ['SIL']]);
+  });
+});
