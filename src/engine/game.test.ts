@@ -647,6 +647,22 @@ describe('shared-track lines (London)', () => {
       ]);
     });
   });
+
+  describe('same numbers together', () => {
+    const hand = [stationId('BAK', 3), 'st:sloane-square'];
+    const opts = { top: stationId('BAK', 5), currentLine: 'BAK', face: n(3), rules: { playSameNumbers: true } };
+
+    it('ends on a multi-line card with both its lines current', () => {
+      const r = ok(london(hand, opts), 'p0', { type: 'play', cardId: hand[0]!, extraCardIds: ['st:sloane-square'] });
+      expect(r.state.discard.at(-1)!.id).toBe('st:sloane-square');
+      expect([r.state.currentLines, r.state.face]).toEqual([['CIR', 'DIS'], n(3)]);
+    });
+
+    it('can lead with a multi-line card and end on another line', () => {
+      const r = ok(london(hand, opts), 'p0', { type: 'play', cardId: 'st:sloane-square', extraCardIds: [hand[0]!] });
+      expect(r.state.currentLines).toEqual(['BAK']);
+    });
+  });
 });
 
 describe('playing same numbers together', () => {
