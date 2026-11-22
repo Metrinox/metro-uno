@@ -2,7 +2,7 @@ import { hongKongMtr } from '../data/hk-mtr';
 import { londonUnderground } from '../data/london-underground';
 import { loadNetwork } from '../data/network';
 import { tinyDef } from '../data/tiny-network';
-import { buildDeck, type Card } from './cards';
+import { buildDeck, cardLines, type Card } from './cards';
 import { shuffle } from './rng';
 
 const hk = loadNetwork(hongKongMtr);
@@ -85,10 +85,10 @@ describe('buildDeck (London Underground)', () => {
     expect(new Set(stationCards.map((c) => ('stationId' in c ? c.stationId : ''))).size).toBe(s);
   });
 
-  it('has 24 action cards, one of each action per line', () => {
+  it('has 30 action cards, one of each action per line', () => {
     const actions = luDeck.filter((c) => c.kind === 'action');
-    expect(lu.lines).toHaveLength(8);
-    expect(actions).toHaveLength(24);
+    expect(lu.lines).toHaveLength(10);
+    expect(actions).toHaveLength(30);
     for (const line of lu.lines) {
       for (const a of ['signal-fault', 'terminus', 'rush-hour']) {
         expect(actions.filter((c) => c.kind === 'action' && c.line === line.code && c.action === a)).toHaveLength(1);
@@ -104,9 +104,39 @@ describe('buildDeck (London Underground)', () => {
     expect([lu.wilds.wild.name.en, lu.wilds.draw4.name.en]).toEqual(['Oyster', 'Tube Strike']);
   });
 
-  it('totals S + 24 + 8 cards with unique ids', () => {
-    expect(luDeck).toHaveLength(s + 24 + 8);
+  it('totals S + 30 + 8 cards with unique ids', () => {
+    expect(luDeck).toHaveLength(s + 30 + 8);
     expect(new Set(luDeck.map((c) => c.id)).size).toBe(luDeck.length);
+  });
+
+  const card = (id: string) => luDeck.find((c) => c.id === `st:${id}`)!;
+
+  it('gives a multi-line station card all its lines and its number (Goldhawk Road, Aldgate)', () => {
+    expect(card('goldhawk-road')).toEqual({
+      id: 'st:goldhawk-road',
+      kind: 'station',
+      stationId: 'goldhawk-road',
+      line: 'CIR',
+      lines: ['CIR', 'H&C'],
+      number: 2,
+    });
+    expect(card('aldgate')).toMatchObject({ kind: 'station', lines: ['CIR', 'MET'], number: 5 });
+    // Shared-track order, not network order: H&C before the District.
+    expect(card('whitechapel')).toMatchObject({ lines: ['H&C', 'DIS'], number: 2 });
+    expect(cardLines(card('goldhawk-road'))).toEqual(['CIR', 'H&C']);
+    expect(cardLines(card('parsons-green'))).toEqual(['DIS']);
+  });
+
+  it('makes Victoria an interchange card with no number', () => {
+    expect(card('victoria')).toEqual({ id: 'st:victoria', kind: 'interchange', stationId: 'victoria', lines: ['CIR', 'DIS', 'VIC'] });
+  });
+
+  it('has 174 cards: 34 interchange, 29 multi-line and 73 single-line station cards', () => {
+    expect(luDeck).toHaveLength(174);
+    const stations = luDeck.filter((c) => c.kind === 'station');
+    expect(luDeck.filter((c) => c.kind === 'interchange')).toHaveLength(34);
+    expect(stations.filter((c) => c.lines)).toHaveLength(29);
+    expect(stations.filter((c) => !c.lines)).toHaveLength(73);
   });
 
   it('gives transfer cards their transfer lines (Hammersmith, Bank)', () => {
@@ -114,7 +144,8 @@ describe('buildDeck (London Underground)', () => {
       id: 'st:hammersmith-hc',
       kind: 'station',
       stationId: 'hammersmith-hc',
-      line: 'SSR',
+      line: 'CIR',
+      lines: ['CIR', 'H&C'],
       number: 1,
       transferLines: ['DIS', 'PIC'],
     });
@@ -123,7 +154,7 @@ describe('buildDeck (London Underground)', () => {
       kind: 'interchange',
       stationId: 'bank',
       lines: ['CEN', 'NOR'],
-      transferLines: ['DIS', 'SSR'],
+      transferLines: ['CIR', 'DIS'],
     });
   });
 });

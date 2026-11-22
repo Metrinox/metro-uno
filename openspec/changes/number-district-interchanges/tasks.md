@@ -26,7 +26,7 @@ The working tree holds an implementation of this change's earlier version (numbe
 
 ## 2. Deck and engine rules
 
-- [ ] 2.1 Add `lines?` to station cards and a `cardLines` helper in `src/engine/cards.ts`, set it in `buildDeck`, and remove `number?` from interchange cards. Verify with `cards.test.ts`:
+- [x] 2.1 Add `lines?` to station cards and a `cardLines` helper in `src/engine/cards.ts`, set it in `buildDeck`, and remove `number?` from interchange cards. Verify with `cards.test.ts`:
   - Goldhawk Road lists CIR and H&C with number 2;
   - Aldgate lists CIR and MET with 5;
   - Victoria is an unnumbered interchange;

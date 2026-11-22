@@ -2,21 +2,8 @@
  * Rule-based computer opponent. Sees only a PlayerView (own hand plus public
  * information), never the full GameState.
  */
-import type { Card } from './cards';
+import { cardLines, type Card } from './cards';
 import { canPlay, drawCardType, lineChoices, sameNumberCards, type Action, type PlayerView } from './game';
-
-/** Lines a card counts toward when judging "which line do I hold most of". */
-function cardLines(card: Card): string[] {
-  switch (card.kind) {
-    case 'station':
-    case 'action':
-      return [card.line];
-    case 'interchange':
-      return card.lines;
-    case 'wild':
-      return [];
-  }
-}
 
 function countOnLine(hand: readonly Card[], line: string): number {
   return hand.filter((c) => cardLines(c).includes(line)).length;

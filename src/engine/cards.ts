@@ -12,7 +12,10 @@ export type Card =
       id: string;
       kind: 'station';
       stationId: string;
+      /** The station's line; on a multi-line station, the first of `lines`. */
       line: string;
+      /** Every line of a station on several shared-track lines (e.g. CIR, DIS); omitted otherwise. */
+      lines?: string[];
       number: number;
       /** Lines a walkway transfer switches to when played, if any. */
       transferLines?: string[];
@@ -28,6 +31,20 @@ export type Card =
   | { id: string; kind: 'action'; action: ActionType; line: string }
   | { id: string; kind: 'wild'; wild: WildType };
 
+/** Every line a card is on: one for a station or action card, several for a multi-line station or interchange. */
+export function cardLines(card: Card): string[] {
+  switch (card.kind) {
+    case 'station':
+      return card.lines ?? [card.line];
+    case 'action':
+      return [card.line];
+    case 'interchange':
+      return card.lines;
+    case 'wild':
+      return [];
+  }
+}
+
 /** Builds the unshuffled deck for a network. Card ids are stable and unique. */
 export function buildDeck(network: Network): Card[] {
   const deck: Card[] = [];
@@ -42,13 +59,15 @@ export function buildDeck(network: Network): Card[] {
         ...(station.transfer ? { transferLines: [...station.transfer.lines] } : {}),
       });
     } else {
-      const line = station.lines[0]!;
+      // A station on several shared-track lines lists them in shared-track order.
+      const lines = station.lines.length > 1 ? network.sharedLines.filter((l) => station.lines.includes(l)) : station.lines;
       deck.push({
         id: `st:${station.id}`,
         kind: 'station',
         stationId: station.id,
-        line,
-        number: station.numbers[line]!,
+        line: lines[0]!,
+        ...(lines.length > 1 ? { lines: [...lines] } : {}),
+        number: station.number!,
         ...(station.transfer ? { transferLines: [...station.transfer.lines] } : {}),
       });
     }
