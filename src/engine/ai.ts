@@ -9,11 +9,11 @@ function countOnLine(hand: readonly Card[], line: string): number {
   return hand.filter((c) => cardLines(c).includes(line)).length;
 }
 
-/** Picks the allowed line matching the most cards in `hand`; ties go to network line order. */
-export function chooseLine(allowed: readonly string[], hand: readonly Card[], networkOrder: readonly string[]): string {
-  const ordered = [...allowed].sort((a, b) => networkOrder.indexOf(a) - networkOrder.indexOf(b));
+/** Picks the allowed option matching the most cards in `hand`; ties go to network line order. */
+export function chooseLine(allowed: readonly string[][], hand: readonly Card[], networkOrder: readonly string[]): string[] {
+  const ordered = [...allowed].sort((a, b) => networkOrder.indexOf(a[0]!) - networkOrder.indexOf(b[0]!));
   let best = ordered[0]!;
-  for (const line of ordered) if (countOnLine(hand, line) > countOnLine(hand, best)) best = line;
+  for (const option of ordered) if (countOnLine(hand, option[0]!) > countOnLine(hand, best[0]!)) best = option;
   return best;
 }
 
@@ -34,12 +34,12 @@ export function chooseAction(view: PlayerView): Action {
     const playedIds = new Set(cards.map((c) => c.id));
     const rest = view.hand.filter((c) => !playedIds.has(c.id));
     const last = cards[cards.length - 1]!;
-    const choices = lineChoices(last, view.lines, view.currentLine);
+    const choices = lineChoices(last, view);
     return {
       type: 'play',
       cardId: cards[0]!.id,
       ...(cards.length > 1 ? { extraCardIds: cards.slice(1).map((c) => c.id) } : {}),
-      ...(choices ? { chosenLine: chooseLine(choices, rest, view.lines) } : {}),
+      ...(choices ? { chosenLines: chooseLine(choices, rest, view.lines) } : {}),
       ...(rest.length === 1 ? { callUno: true } : {}),
     };
   };
@@ -102,8 +102,8 @@ export function chooseAction(view: PlayerView): Action {
     const ids = new Set(cards.map((x) => x.id));
     const rest = view.hand.filter((h) => !ids.has(h.id));
     const last = cards[cards.length - 1]!;
-    const choices = lineChoices(last, view.lines, view.currentLine);
-    const landing = choices ? chooseLine(choices, rest, view.lines) : cardLines(last)[0]!;
+    const choices = lineChoices(last, view);
+    const landing = choices ? chooseLine(choices, rest, view.lines)[0]! : cardLines(last)[0]!;
     const score = countOnLine(rest, landing) * 10 + cards.length;
     if (score > bestScore) {
       best = cards;

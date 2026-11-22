@@ -81,11 +81,14 @@ export interface GameState {
   rules: HouseRules;
   /** Line codes in the network, in display order; wilds may choose any of them. */
   lines: string[];
+  /** Shared-track lines (in card order), which can be current together; empty for most networks. */
+  sharedLines: string[];
   players: PlayerState[];
   drawPile: Card[];
   /** Discard pile; the last element is the top card. */
   discard: Card[];
-  currentLine: string;
+  /** One line, or several shared-track lines current together (after a multi-line station). */
+  currentLines: string[];
   face: Face;
   /** Index into `players` of whose turn it is. */
   turn: number;
@@ -107,7 +110,7 @@ export interface GameState {
 }
 
 export type Action =
-  | { type: 'play'; cardId: string; extraCardIds?: string[]; chosenLine?: string; callUno?: boolean }
+  | { type: 'play'; cardId: string; extraCardIds?: string[]; chosenLines?: string[]; callUno?: boolean }
   | { type: 'draw' }
   | { type: 'pass' };
 
@@ -115,7 +118,7 @@ export type DrawReason = 'turn' | 'stack' | 'penalty';
 
 export type GameEvent =
   | { type: 'played'; player: string; card: Card }
-  | { type: 'lineChanged'; player: string; line: string }
+  | { type: 'lineChanged'; player: string; lines: string[] }
   | { type: 'unoCalled'; player: string }
   | { type: 'drew'; player: string; count: number; reason: DrawReason }
   | { type: 'drawPending'; player: string; count: number }
@@ -155,15 +158,20 @@ export interface PlayerSetup {
 // ---------------------------------------------------------------------------
 // Matching
 
-/** Whether `card` matches the current line and face (ignoring any pending draw). */
-export function isPlayable(card: Card, line: string, face: Face): boolean {
+/** Whether any of `lines` is current. */
+function onCurrent(lines: readonly string[], currentLines: readonly string[]): boolean {
+  return lines.some((l) => currentLines.includes(l));
+}
+
+/** Whether `card` matches the current lines and face (ignoring any pending draw). */
+export function isPlayable(card: Card, currentLines: readonly string[], face: Face): boolean {
   switch (card.kind) {
     case 'station':
-      return card.line === line || (face.kind === 'number' && face.n === card.number);
+      return currentLines.includes(card.line) || (face.kind === 'number' && face.n === card.number);
     case 'interchange':
-      return card.lines.includes(line);
+      return onCurrent(card.lines, currentLines);
     case 'action':
-      return card.line === line || (face.kind === 'action' && face.action === card.action);
+      return currentLines.includes(card.line) || (face.kind === 'action' && face.action === card.action);
     case 'wild':
       return true;
   }
@@ -183,7 +191,7 @@ export function canStack(card: Card, pending: PendingDraw, rules: HouseRules): b
 
 /** The parts of a state (or a player's view) that decide what can be played. */
 export interface PlayContext {
-  currentLine: string;
+  currentLines: string[];
   face: Face;
   pendingDraw: PendingDraw | null;
   rules: HouseRules;
@@ -192,7 +200,7 @@ export interface PlayContext {
 /** Whether `card` may be played now, including the pending-draw restriction. */
 export function canPlay(card: Card, ctx: PlayContext): boolean {
   if (ctx.pendingDraw) return canStack(card, ctx.pendingDraw, ctx.rules);
-  return isPlayable(card, ctx.currentLine, ctx.face);
+  return isPlayable(card, ctx.currentLines, ctx.face);
 }
 
 /** Other station cards in `hand` that could be played together with `card`. */
@@ -201,17 +209,39 @@ export function sameNumberCards(card: Card, hand: readonly Card[]): Card[] {
   return hand.filter((c) => c.id !== card.id && c.kind === 'station' && c.number === card.number);
 }
 
+/** What `lineChoices` needs to know about the round. */
+export interface LineContext {
+  lines: readonly string[];
+  sharedLines: readonly string[];
+  currentLines: readonly string[];
+}
+
+/** Whether two options name the same lines. */
+export function sameLines(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((l) => b.includes(l));
+}
+
 /**
- * Lines `card` may change to, or null for cards that set their own line.
- * An interchange must change line, so the current line is never offered;
- * a 2-line interchange therefore has exactly one choice. A transfer station
- * switches to its transfer lines. Wilds may pick any line.
+ * The options `card` may change line to, or null for cards that set their own
+ * line. Each option is a list of lines that become current together.
+ * - An interchange must change line, so options on the current lines are left
+ *   out; a two-line interchange therefore has exactly one choice.
+ * - A transfer station switches to its transfer lines; an interchange with a
+ *   transfer offers them too.
+ * - Wilds may pick any single line.
  */
-export function lineChoices(card: Card, allLines: readonly string[], currentLine: string): string[] | null {
-  if (card.kind === 'interchange') return [...card.lines, ...(card.transferLines ?? [])].filter((l) => l !== currentLine);
-  if (card.kind === 'station' && card.transferLines) return [...card.transferLines];
-  if (card.kind === 'wild') return [...allLines];
-  return null;
+export function lineChoices(card: Card, ctx: LineContext): string[][] | null {
+  const single = (lines: readonly string[]) => lines.map((l) => [l]);
+  switch (card.kind) {
+    case 'interchange':
+      return single([...card.lines, ...(card.transferLines ?? [])].filter((l) => !ctx.currentLines.includes(l)));
+    case 'station':
+      return card.transferLines ? single(card.transferLines) : null;
+    case 'wild':
+      return single(ctx.lines);
+    case 'action':
+      return null;
+  }
 }
 
 export function topCard(state: GameState): Card {
@@ -259,10 +289,11 @@ export function createGame({ network, players, seed, rules: partialRules }: NewG
   return {
     rules,
     lines: network.lines.map((l) => l.code),
+    sharedLines: [...network.sharedLines],
     players: players.map((p, i) => ({ ...p, hand: hands[i]! })),
     drawPile: pile,
     discard: [start],
-    currentLine: start.line,
+    currentLines: [start.line],
     face: { kind: 'number', n: start.number },
     turn: 0,
     direction: 1,
@@ -327,13 +358,15 @@ function play(state: GameState, idx: number, action: Extract<Action, { type: 'pl
   const played = [card, ...extras];
   const last = played[played.length - 1]!;
 
-  const choices = lineChoices(last, state.lines, state.currentLine);
-  let newLine: string | undefined;
+  const choices = lineChoices(last, state);
+  let newLines: string[] | undefined;
   if (choices) {
-    // Only one possible line (a 2-line interchange): no choice needed.
-    newLine = action.chosenLine ?? (choices.length === 1 ? choices[0] : undefined);
-    if (newLine === undefined) return reject('line-choice-required');
-    if (!choices.includes(newLine)) return reject('invalid-line');
+    // Only one possible option (e.g. a two-line interchange): no choice needed.
+    const pick = action.chosenLines ?? (choices.length === 1 ? choices[0] : undefined);
+    if (pick === undefined) return reject('line-choice-required');
+    newLines = choices.find((o) => sameLines(o, pick));
+    if (newLines === undefined) return reject('invalid-line');
+    newLines = [...newLines];
   }
 
   const s = cloneState(state);
@@ -348,25 +381,25 @@ function play(state: GameState, idx: number, action: Extract<Action, { type: 'pl
   s.drawnCardId = null;
   s.mustPlayDrawn = false;
 
-  // New line and face, set by the last card played.
-  const prevLine = s.currentLine;
+  // New lines and face, set by the last card played.
+  const prevLines = s.currentLines;
   switch (last.kind) {
     case 'station':
       // A transfer station switches to the chosen transfer line; the number stays.
-      s.currentLine = newLine ?? last.line;
+      s.currentLines = newLines ?? [last.line];
       s.face = { kind: 'number', n: last.number };
       break;
     case 'action':
-      s.currentLine = last.line;
+      s.currentLines = [last.line];
       s.face = { kind: 'action', action: last.action };
       break;
     case 'interchange':
     case 'wild':
-      s.currentLine = newLine!;
+      s.currentLines = newLines!;
       s.face = { kind: 'none' };
       break;
   }
-  if (s.currentLine !== prevLine) events.push({ type: 'lineChanged', player: me.id, line: s.currentLine });
+  if (!sameLines(s.currentLines, prevLines)) events.push({ type: 'lineChanged', player: me.id, lines: [...s.currentLines] });
 
   const missedUno = me.hand.length === 1 && !action.callUno;
   if (me.hand.length === 1 && action.callUno) events.push({ type: 'unoCalled', player: me.id });
@@ -571,6 +604,7 @@ export interface PlayerView extends PlayContext {
   direction: 1 | -1;
   topCard: Card;
   lines: string[];
+  sharedLines: string[];
   drawPileCount: number;
   discardCount: number;
   phase: GameState['phase'];
@@ -593,11 +627,12 @@ export function viewFor(state: GameState, playerId: string): PlayerView {
     myIndex,
     direction: state.direction,
     topCard: topCard(state),
-    currentLine: state.currentLine,
+    currentLines: [...state.currentLines],
     face: { ...state.face },
     pendingDraw: state.pendingDraw && { ...state.pendingDraw },
     rules: { ...state.rules },
     lines: [...state.lines],
+    sharedLines: [...state.sharedLines],
     drawPileCount: state.drawPile.length,
     discardCount: state.discard.length,
     phase: state.phase,

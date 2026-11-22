@@ -1,15 +1,21 @@
 import { hongKongMtr } from '../data/hk-mtr';
-import { loadNetwork } from '../data/network';
-import { buildDeck, type Card } from './cards';
+import { londonUnderground } from '../data/london-underground';
+import { loadNetwork, type Network } from '../data/network';
+import { buildDeck, cardLines, type Card } from './cards';
 import { normalizeRules, type Face, type GameState, type HouseRules, type PendingDraw } from './game';
 
 export const hk = loadNetwork(hongKongMtr);
+export const lu = loadNetwork(londonUnderground);
 const deck = buildDeck(hk);
-const byId = new Map(deck.map((c) => [c.id, c]));
+const decks = new Map<Network, Map<string, Card>>();
+const byIdIn = (net: Network) => {
+  if (!decks.has(net)) decks.set(net, new Map(buildDeck(net).map((c) => [c.id, c])));
+  return decks.get(net)!;
+};
 
-/** Looks up a Hong Kong card by id, e.g. `card('st:chai-wan')`, `card('act:rush-hour:ISL')`. */
-export function card(id: string): Card {
-  const c = byId.get(id);
+/** Looks up a card by id, e.g. `card('st:chai-wan')`, `card('act:rush-hour:ISL')`; Hong Kong unless `net` is given. */
+export function card(id: string, net: Network = hk): Card {
+  const c = byIdIn(net).get(id);
   if (!c) throw new Error(`No card ${id}`);
   return structuredClone(c);
 }
@@ -24,7 +30,10 @@ export function stationCard(line: string, n: number): Card {
 export interface ScenarioOptions {
   hands: string[][];
   top?: string;
+  /** One current line; shorthand for `currentLines: [line]`. */
   currentLine?: string;
+  /** Several current lines (shared-track lines current together). */
+  currentLines?: string[];
   face?: Face;
   drawPile?: string[];
   discardBelow?: string[];
@@ -32,18 +41,24 @@ export interface ScenarioOptions {
   direction?: 1 | -1;
   rules?: Partial<HouseRules>;
   pendingDraw?: PendingDraw;
+  /** Network the cards come from; Hong Kong by default. */
+  network?: Network;
 }
 
 /** Builds a hand-crafted game state with players p0..pN (p0 human). */
 export function scenario(o: ScenarioOptions): GameState {
-  const top = card(o.top ?? 'st:chai-wan');
+  const net = o.network ?? hk;
+  const get = (id: string) => card(id, net);
+  const top = get(o.top ?? 'st:chai-wan');
   return {
     rules: normalizeRules(o.rules),
-    lines: hk.lines.map((l) => l.code),
-    players: o.hands.map((h, i) => ({ id: `p${i}`, name: `P${i}`, isHuman: i === 0, hand: h.map(card) })),
-    drawPile: (o.drawPile ?? []).map(card),
-    discard: [...(o.discardBelow ?? []).map(card), top],
-    currentLine: o.currentLine ?? (top.kind === 'station' || top.kind === 'action' ? top.line : 'ISL'),
+    lines: net.lines.map((l) => l.code),
+    sharedLines: [...net.sharedLines],
+    players: o.hands.map((h, i) => ({ id: `p${i}`, name: `P${i}`, isHuman: i === 0, hand: h.map(get) })),
+    drawPile: (o.drawPile ?? []).map(get),
+    discard: [...(o.discardBelow ?? []).map(get), top],
+    currentLines:
+      o.currentLines ?? (o.currentLine ? [o.currentLine] : top.kind === 'station' || top.kind === 'action' ? cardLines(top) : ['ISL']),
     face: o.face ?? (top.kind === 'station' ? { kind: 'number', n: top.number } : { kind: 'none' }),
     turn: o.turn ?? 0,
     direction: o.direction ?? 1,

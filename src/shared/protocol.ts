@@ -8,7 +8,7 @@
 import { networkById } from '../data/networks';
 import type { Action, GameEvent, HouseRules, PlayerView, RejectReason } from '../engine/game';
 
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 /** Largest message either side accepts, in bytes. */
 export const MAX_MESSAGE_BYTES = 8 * 1024;
 export const ROOM_SEATS = 4;
@@ -139,7 +139,7 @@ function isAction(v: unknown): v is Action {
       return (
         isCardId(v.cardId) &&
         isOptional(v.extraCardIds, (x): x is string[] => Array.isArray(x) && x.length <= 20 && x.every(isCardId)) &&
-        isOptional(v.chosenLine, (x): x is string => isStr(x, 16)) &&
+        isOptional(v.chosenLines, (x): x is string[] => Array.isArray(x) && x.length <= 4 && x.every((l) => isStr(l, 16))) &&
         isOptional(v.callUno, isBool)
       );
     default:

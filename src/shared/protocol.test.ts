@@ -22,7 +22,7 @@ describe('parseClientMessage', () => {
     [{ type: 'leave' }],
     [{ type: 'act', action: { type: 'draw' } }],
     [{ type: 'act', action: { type: 'pass' } }],
-    [{ type: 'act', action: { type: 'play', cardId: 'st-ISL-3', extraCardIds: ['st-TML-3'], chosenLine: 'TML', callUno: true } }],
+    [{ type: 'act', action: { type: 'play', cardId: 'st-ISL-3', extraCardIds: ['st-TML-3'], chosenLines: ['TML'], callUno: true } }],
   ])('accepts %j', (msg) => {
     expect(parseClientMessage(j(msg))).toEqual(msg);
   });

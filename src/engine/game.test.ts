@@ -14,35 +14,35 @@ describe('isPlayable', () => {
   const isl3 = { kind: 'number', n: 3 } as const;
 
   it('matches by line', () => {
-    expect(isPlayable(card('st:tai-koo'), 'ISL', isl3)).toBe(true);
+    expect(isPlayable(card('st:tai-koo'), ['ISL'], isl3)).toBe(true);
   });
   it('matches by number on another line', () => {
-    expect(isPlayable(card('st:heng-on'), 'ISL', isl3)).toBe(true);
+    expect(isPlayable(card('st:heng-on'), ['ISL'], isl3)).toBe(true);
   });
   it('rejects a different line and number', () => {
-    expect(isPlayable(card('st:che-kung-temple'), 'ISL', isl3)).toBe(false);
+    expect(isPlayable(card('st:che-kung-temple'), ['ISL'], isl3)).toBe(false);
   });
   it('matches an interchange only by its lines', () => {
-    expect(isPlayable(card('st:admiralty'), 'ISL', isl3)).toBe(true);
-    expect(isPlayable(card('st:admiralty'), 'KTL', isl3)).toBe(false);
+    expect(isPlayable(card('st:admiralty'), ['ISL'], isl3)).toBe(true);
+    expect(isPlayable(card('st:admiralty'), ['KTL'], isl3)).toBe(false);
   });
   it('matches a line action by line or by action type', () => {
-    expect(isPlayable(card('act:signal-fault:ISL'), 'ISL', isl3)).toBe(true);
-    expect(isPlayable(card('act:signal-fault:TWL'), 'ISL', { kind: 'action', action: 'signal-fault' })).toBe(true);
-    expect(isPlayable(card('act:signal-fault:TWL'), 'ISL', { kind: 'action', action: 'terminus' })).toBe(false);
-    expect(isPlayable(card('act:signal-fault:TWL'), 'ISL', isl3)).toBe(false);
+    expect(isPlayable(card('act:signal-fault:ISL'), ['ISL'], isl3)).toBe(true);
+    expect(isPlayable(card('act:signal-fault:TWL'), ['ISL'], { kind: 'action', action: 'signal-fault' })).toBe(true);
+    expect(isPlayable(card('act:signal-fault:TWL'), ['ISL'], { kind: 'action', action: 'terminus' })).toBe(false);
+    expect(isPlayable(card('act:signal-fault:TWL'), ['ISL'], isl3)).toBe(false);
   });
   it('always allows wilds', () => {
-    expect(isPlayable(card('wild:octopus:1'), 'KTL', { kind: 'none' })).toBe(true);
-    expect(isPlayable(card('wild:typhoon:1'), 'TML', isl3)).toBe(true);
+    expect(isPlayable(card('wild:octopus:1'), ['KTL'], { kind: 'none' })).toBe(true);
+    expect(isPlayable(card('wild:typhoon:1'), ['TML'], isl3)).toBe(true);
   });
   it('offers the right line choices', () => {
-    const all = hk.lines.map((l) => l.code);
+    const ctx = (currentLines: string[], lines = hk.lines.map((l) => l.code)) => ({ lines, sharedLines: [], currentLines });
     // Interchanges never offer the current line.
-    expect(lineChoices(card('st:admiralty'), all, 'ISL')).toEqual(['TWL', 'EAL', 'SIL']);
-    expect(lineChoices(card('st:north-point'), all, 'ISL')).toEqual(['TKL']);
-    expect(lineChoices(card('wild:octopus:1'), ['A', 'B'], 'A')).toEqual(['A', 'B']);
-    expect(lineChoices(card('st:tai-koo'), ['A'], 'A')).toBeNull();
+    expect(lineChoices(card('st:admiralty'), ctx(['ISL']))).toEqual([['TWL'], ['EAL'], ['SIL']]);
+    expect(lineChoices(card('st:north-point'), ctx(['ISL']))).toEqual([['TKL']]);
+    expect(lineChoices(card('wild:octopus:1'), ctx(['A'], ['A', 'B']))).toEqual([['A'], ['B']]);
+    expect(lineChoices(card('st:tai-koo'), ctx(['A'], ['A']))).toBeNull();
   });
 });
 
@@ -57,7 +57,7 @@ describe('createGame', () => {
       expect(g.discard).toHaveLength(1);
       expect(top.kind).toBe('station');
       if (top.kind === 'station') {
-        expect(g.currentLine).toBe(top.line);
+        expect(g.currentLines).toEqual([top.line]);
         expect(g.face).toEqual({ kind: 'number', n: top.number });
       }
       expect(g.drawPile.length + 28 + 1).toBe(130);
@@ -78,15 +78,15 @@ describe('playing station cards', () => {
   it('sets line and face (Kwun Tong 5)', () => {
     const s = scenario({ hands: [['st:choi-hung', ...filler], filler], top: 'st:kowloon-bay' });
     const r = ok(s, 'p0', { type: 'play', cardId: 'st:choi-hung' });
-    expect(r.state.currentLine).toBe('KTL');
+    expect(r.state.currentLines).toEqual(['KTL']);
     expect(r.state.face).toEqual({ kind: 'number', n: 5 });
   });
 
   it('changes line on a number match', () => {
     const s = scenario({ hands: [['st:heng-on', ...filler], filler], top: 'st:sai-ying-pun' });
     const r = ok(s, 'p0', { type: 'play', cardId: 'st:heng-on' });
-    expect(r.state.currentLine).toBe('TML');
-    expect(r.events).toContainEqual({ type: 'lineChanged', player: 'p0', line: 'TML' });
+    expect(r.state.currentLines).toEqual(['TML']);
+    expect(r.events).toContainEqual({ type: 'lineChanged', player: 'p0', lines: ['TML'] });
   });
 
   it('rejects a non-matching card and leaves state unchanged', () => {
@@ -101,26 +101,26 @@ describe('playing station cards', () => {
 describe('interchange plays', () => {
   it('lets the player choose among its lines; face becomes none', () => {
     const s = scenario({ hands: [['st:admiralty', ...filler], filler], top: 'st:sai-ying-pun' });
-    const r = ok(s, 'p0', { type: 'play', cardId: 'st:admiralty', chosenLine: 'SIL' });
-    expect(r.state.currentLine).toBe('SIL');
+    const r = ok(s, 'p0', { type: 'play', cardId: 'st:admiralty', chosenLines: ['SIL'] });
+    expect(r.state.currentLines).toEqual(['SIL']);
     expect(r.state.face).toEqual({ kind: 'none' });
   });
 
   it('changes a 2-line interchange to its other line without a choice', () => {
     const s = scenario({ hands: [['st:north-point', ...filler], filler], top: 'st:sai-ying-pun' });
     const r = ok(s, 'p0', { type: 'play', cardId: 'st:north-point' });
-    expect(r.state.currentLine).toBe('TKL');
+    expect(r.state.currentLines).toEqual(['TKL']);
     expect(r.state.face).toEqual({ kind: 'none' });
   });
 
   it('cannot stay on the current line', () => {
     const s = scenario({ hands: [['st:admiralty', ...filler], filler], top: 'st:sai-ying-pun' });
     const before = structuredClone(s);
-    expect(applyAction(s, 'p0', { type: 'play', cardId: 'st:admiralty', chosenLine: 'ISL' })).toEqual({
+    expect(applyAction(s, 'p0', { type: 'play', cardId: 'st:admiralty', chosenLines: ['ISL'] })).toEqual({
       ok: false,
       reason: 'invalid-line',
     });
-    expect(applyAction(s, 'p0', { type: 'play', cardId: 'st:central', chosenLine: 'ISL' })).toEqual({
+    expect(applyAction(s, 'p0', { type: 'play', cardId: 'st:central', chosenLines: ['ISL'] })).toEqual({
       ok: false,
       reason: 'card-not-in-hand',
     });
@@ -129,7 +129,7 @@ describe('interchange plays', () => {
 
   it('cannot be played off its lines', () => {
     const s = scenario({ hands: [['st:admiralty', ...filler], filler], top: 'st:choi-hung' });
-    expect(applyAction(s, 'p0', { type: 'play', cardId: 'st:admiralty', chosenLine: 'ISL' })).toEqual({
+    expect(applyAction(s, 'p0', { type: 'play', cardId: 'st:admiralty', chosenLines: ['ISL'] })).toEqual({
       ok: false,
       reason: 'not-playable',
     });
@@ -137,7 +137,7 @@ describe('interchange plays', () => {
 
   it('rejects a line the station is not on, or no choice', () => {
     const s = scenario({ hands: [['st:admiralty', ...filler], filler], top: 'st:sai-ying-pun' });
-    expect(applyAction(s, 'p0', { type: 'play', cardId: 'st:admiralty', chosenLine: 'KTL' })).toEqual({
+    expect(applyAction(s, 'p0', { type: 'play', cardId: 'st:admiralty', chosenLines: ['KTL'] })).toEqual({
       ok: false,
       reason: 'invalid-line',
     });
@@ -157,7 +157,7 @@ describe('action cards', () => {
       face: { kind: 'action', action: 'signal-fault' },
     });
     const r = ok(s, 'p0', { type: 'play', cardId: 'act:signal-fault:TWL' });
-    expect(r.state.currentLine).toBe('TWL');
+    expect(r.state.currentLines).toEqual(['TWL']);
     expect(r.state.face).toEqual({ kind: 'action', action: 'signal-fault' });
   });
 
@@ -195,8 +195,8 @@ describe('action cards', () => {
 describe('wild cards', () => {
   it('Octopus sets any line with face none', () => {
     const s = scenario({ hands: [['wild:octopus:1', ...filler], filler] });
-    const r = ok(s, 'p0', { type: 'play', cardId: 'wild:octopus:1', chosenLine: 'EAL' });
-    expect(r.state.currentLine).toBe('EAL');
+    const r = ok(s, 'p0', { type: 'play', cardId: 'wild:octopus:1', chosenLines: ['EAL'] });
+    expect(r.state.currentLines).toEqual(['EAL']);
     expect(r.state.face).toEqual({ kind: 'none' });
   });
 
@@ -205,15 +205,15 @@ describe('wild cards', () => {
       hands: [['wild:typhoon:1', ...filler], filler, filler],
       drawPile: ['st:lok-fu', 'st:lam-tin', 'st:kwun-tong', 'st:hku', 'st:tin-hau'],
     });
-    const r = ok(s, 'p0', { type: 'play', cardId: 'wild:typhoon:1', chosenLine: 'TML' });
+    const r = ok(s, 'p0', { type: 'play', cardId: 'wild:typhoon:1', chosenLines: ['TML'] });
     expect(r.state.players[1]!.hand).toHaveLength(7);
     expect(r.state.turn).toBe(2);
-    expect(r.state.currentLine).toBe('TML');
+    expect(r.state.currentLines).toEqual(['TML']);
   });
 
   it('rejects an unknown line', () => {
     const s = scenario({ hands: [['wild:octopus:1', ...filler], filler] });
-    expect(applyAction(s, 'p0', { type: 'play', cardId: 'wild:octopus:1', chosenLine: 'XXX' })).toEqual({
+    expect(applyAction(s, 'p0', { type: 'play', cardId: 'wild:octopus:1', chosenLines: ['XXX'] })).toEqual({
       ok: false,
       reason: 'invalid-line',
     });
@@ -422,7 +422,7 @@ describe('rejections leave state unchanged', () => {
     ['p9', { type: 'draw' }, 'unknown-player'],
     ['p0', { type: 'play', cardId: 'st:lok-fu' }, 'card-not-in-hand'],
     ['p0', { type: 'play', cardId: 'st:jordan' }, 'not-playable'],
-    ['p0', { type: 'play', cardId: 'st:admiralty', chosenLine: 'KTL' }, 'invalid-line'],
+    ['p0', { type: 'play', cardId: 'st:admiralty', chosenLines: ['KTL'] }, 'invalid-line'],
   ];
   it.each(cases)('%s %j → %s', (player, action, reason) => {
     const s = scenario({ hands: [['st:admiralty', ...filler], filler], top: 'st:sai-ying-pun', drawPile: ['st:hku'] });
@@ -501,9 +501,9 @@ describe('draw stacking', () => {
       top: 'act:rush-hour:ISL',
       pendingDraw: pending2,
     });
-    const r = ok(s, 'p0', { type: 'play', cardId: 'wild:typhoon:1', chosenLine: 'EAL' });
+    const r = ok(s, 'p0', { type: 'play', cardId: 'wild:typhoon:1', chosenLines: ['EAL'] });
     expect(r.state.pendingDraw).toEqual({ count: 6, last: 'typhoon' });
-    expect(r.state.currentLine).toBe('EAL');
+    expect(r.state.currentLines).toEqual(['EAL']);
   });
 
   it('rejects mixing when "mix +2 and +4" is off', () => {
@@ -513,7 +513,7 @@ describe('draw stacking', () => {
       pendingDraw: pending2,
       rules: { mixDrawStacking: false },
     });
-    expect(applyAction(s, 'p0', { type: 'play', cardId: 'wild:typhoon:1', chosenLine: 'EAL' })).toEqual({
+    expect(applyAction(s, 'p0', { type: 'play', cardId: 'wild:typhoon:1', chosenLines: ['EAL'] })).toEqual({
       ok: false,
       reason: 'not-playable',
     });
@@ -543,7 +543,7 @@ describe('playing same numbers together', () => {
     const s = scenario({ hands: [['st:sai-ying-pun', 'st:heng-on', ...filler], filler], top: 'st:hku' });
     const r = ok(s, 'p0', { type: 'play', cardId: 'st:sai-ying-pun', extraCardIds: ['st:heng-on'] });
     expect(r.state.discard.slice(-2).map((c) => c.id)).toEqual(['st:sai-ying-pun', 'st:heng-on']);
-    expect(r.state.currentLine).toBe('TML');
+    expect(r.state.currentLines).toEqual(['TML']);
     expect(r.state.face).toEqual({ kind: 'number', n: 3 });
     expect(r.state.players[0]!.hand).toHaveLength(3);
   });
@@ -581,8 +581,8 @@ describe('playing same numbers together', () => {
 describe('walkway transfers', () => {
   it('Hong Kong switches to the chosen Central line and keeps its number', () => {
     const s = scenario({ hands: [['st:hong-kong', ...filler], filler], top: 'st:kowloon' });
-    const r = ok(s, 'p0', { type: 'play', cardId: 'st:hong-kong', chosenLine: 'TWL' });
-    expect(r.state.currentLine).toBe('TWL');
+    const r = ok(s, 'p0', { type: 'play', cardId: 'st:hong-kong', chosenLines: ['TWL'] });
+    expect(r.state.currentLines).toEqual(['TWL']);
     expect(r.state.face).toEqual({ kind: 'number', n: 1 });
   });
 
@@ -592,7 +592,7 @@ describe('walkway transfers', () => {
       ok: false,
       reason: 'line-choice-required',
     });
-    expect(applyAction(s, 'p0', { type: 'play', cardId: 'st:hong-kong', chosenLine: 'TCL' })).toEqual({
+    expect(applyAction(s, 'p0', { type: 'play', cardId: 'st:hong-kong', chosenLines: ['TCL'] })).toEqual({
       ok: false,
       reason: 'invalid-line',
     });
@@ -601,27 +601,27 @@ describe('walkway transfers', () => {
   it('Hong Kong can be played by number', () => {
     // Kennedy Town is ISL 1.
     const s = scenario({ hands: [['st:hong-kong', ...filler], filler], top: 'st:kennedy-town' });
-    const r = ok(s, 'p0', { type: 'play', cardId: 'st:hong-kong', chosenLine: 'ISL' });
-    expect(r.state.currentLine).toBe('ISL');
+    const r = ok(s, 'p0', { type: 'play', cardId: 'st:hong-kong', chosenLines: ['ISL'] });
+    expect(r.state.currentLines).toEqual(['ISL']);
     expect(r.state.face).toEqual({ kind: 'number', n: 1 });
   });
 
   it('Central offers its other line and the Tung Chung Line, but is not playable on TCL', () => {
-    expect(lineChoices(card('st:central'), hk.lines.map((l) => l.code), 'ISL')).toEqual(['TWL', 'TCL']);
+    expect(lineChoices(card('st:central'), { lines: [], sharedLines: [], currentLines: ['ISL'] })).toEqual([['TWL'], ['TCL']]);
     const s = scenario({ hands: [['st:central', ...filler], filler], top: 'st:sai-ying-pun' });
-    const r = ok(s, 'p0', { type: 'play', cardId: 'st:central', chosenLine: 'TCL' });
-    expect(r.state.currentLine).toBe('TCL');
+    const r = ok(s, 'p0', { type: 'play', cardId: 'st:central', chosenLines: ['TCL'] });
+    expect(r.state.currentLines).toEqual(['TCL']);
     expect(r.state.face).toEqual({ kind: 'none' });
-    expect(isPlayable(card('st:central'), 'TCL', { kind: 'none' })).toBe(false);
+    expect(isPlayable(card('st:central'), ['TCL'], { kind: 'none' })).toBe(false);
   });
 
   it('East TST switches to the Tsuen Wan Line automatically, and TST to Tuen Ma', () => {
     // Austin is TML 14, so East TST (TML 13) matches by line.
     const s = scenario({ hands: [['st:east-tsim-sha-tsui', ...filler], filler], top: 'st:austin' });
     const r = ok(s, 'p0', { type: 'play', cardId: 'st:east-tsim-sha-tsui' });
-    expect(r.state.currentLine).toBe('TWL');
+    expect(r.state.currentLines).toEqual(['TWL']);
     expect(r.state.face).toEqual({ kind: 'number', n: 13 });
     const s2 = scenario({ hands: [['st:tsim-sha-tsui', ...filler], filler], top: 'st:sham-shui-po' });
-    expect(ok(s2, 'p0', { type: 'play', cardId: 'st:tsim-sha-tsui' }).state.currentLine).toBe('TML');
+    expect(ok(s2, 'p0', { type: 'play', cardId: 'st:tsim-sha-tsui' }).state.currentLines).toEqual(['TML']);
   });
 });

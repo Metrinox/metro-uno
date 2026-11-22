@@ -33,7 +33,7 @@ function describe(item: LogItem, network: Network, t: Dict, lang: Lang, who: Who
     case 'played':
       return t.ev.played(who(item.player), cardName(item.card, network, lang, t));
     case 'lineChanged':
-      return t.ev.lineChanged(lineName(network, item.line, lang));
+      return t.ev.lineChanged(lineName(network, item.lines[0]!, lang));
     case 'unoCalled':
       return t.ev.unoCalled(who(item.player));
     case 'drew':
@@ -81,20 +81,20 @@ export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }
   const unoAvailable = myTurn && view.hand.length >= 2 && (view.hand.length === 2 || view.rules.playSameNumbers);
   const pending = view.pendingDraw;
   const highlightStation =
-    (top.kind === 'station' && top.line === view.currentLine) ||
-    (top.kind === 'interchange' && top.lines.includes(view.currentLine))
+    (top.kind === 'station' && view.currentLines.includes(top.line)) ||
+    (top.kind === 'interchange' && top.lines.some((l) => view.currentLines.includes(l)))
       ? top.stationId
       : null;
 
 /** Plays `cards` in order (the last one sets the line). */
   const play = useCallback(
-    (cards: Card[], chosenLine?: string) => {
+    (cards: Card[], chosenLines?: string[]) => {
       const [first, ...extras] = cards;
       send({
         type: 'play',
         cardId: first!.id,
         ...(extras.length > 0 ? { extraCardIds: extras.map((c) => c.id) } : {}),
-        chosenLine,
+        chosenLines,
         callUno: unoArmed,
       });
       setUnoArmed(false);
@@ -104,10 +104,10 @@ export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }
 
   /** Asks for a line if the last card needs one, then plays. */
   const playWithLine = (cards: Card[]) => {
-    const lines = lineChoices(cards[cards.length - 1]!, view.lines, view.currentLine);
+    const options = lineChoices(cards[cards.length - 1]!, view);
     // Ask only when there is a real choice; a 2-line interchange changes line on its own.
-    if (lines && lines.length > 1) setChoosing({ cards, lines });
-    else play(cards, lines?.[0]);
+    if (options && options.length > 1) setChoosing({ cards, lines: options.map((o) => o[0]!) });
+    else play(cards, options?.[0]);
   };
 
   const onCard = (card: Card) => {
@@ -183,7 +183,7 @@ export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }
       <section className="table" aria-label={t.currentLine}>
         <div className="table-info">
           <span className="label">{t.currentLine}</span>
-          <LineBadge code={view.currentLine} testId="current-line" />
+          <LineBadge code={view.currentLines[0]!} testId="current-line" />
           <span className="direction" data-testid="direction" title={t.direction}>
             {view.direction === 1 ? '↻' : '↺'} {view.direction === 1 ? t.clockwise : t.anticlockwise}
           </span>
@@ -204,7 +204,7 @@ export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }
         </button>
       </section>
 
-      <LineStrip line={view.currentLine} highlightStation={highlightStation} />
+      <LineStrip line={view.currentLines[0]!} highlightStation={highlightStation} />
 
       <section className="status">
         {myPlace > 0 && !ended && (
@@ -273,7 +273,7 @@ export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }
         <SameNumberChooser
           first={grouping.first}
           others={grouping.others}
-          canLead={(c) => isPlayable(c, view.currentLine, view.face)}
+          canLead={(c) => isPlayable(c, view.currentLines, view.face)}
           onCancel={() => setGrouping(null)}
           onPlay={(cards) => {
             setGrouping(null);
@@ -289,7 +289,7 @@ export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }
           onChoose={(line) => {
             const cards = choosing.cards;
             setChoosing(null);
-            play(cards, line);
+            play(cards, [line]);
           }}
         />
       )}

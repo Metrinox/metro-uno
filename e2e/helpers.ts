@@ -59,13 +59,13 @@ export async function arrange(page: Page, spec: Arrange) {
     s.discard = [newTop];
     s.drawPile = [...drawTop, ...all.values()];
     if (newTop.kind === 'station') {
-      s.currentLine = newTop.line;
+      s.currentLines = newTop.lines ?? [newTop.line];
       s.face = { kind: 'number', n: newTop.number };
     } else if (newTop.kind === 'action') {
-      s.currentLine = newTop.line;
+      s.currentLines = [newTop.line];
       s.face = { kind: 'action', action: newTop.action };
     }
-    if (spec.currentLine) s.currentLine = spec.currentLine;
+    if (spec.currentLine) s.currentLines = [spec.currentLine];
     if (spec.face) s.face = spec.face as typeof s.face;
     s.turn = spec.turn ?? 0;
     s.drawnCardId = null;

@@ -12,11 +12,11 @@ describe('chooseAction', () => {
       hands: [['wild:octopus:1', 'st:lok-fu', 'st:lam-tin', 'st:kwun-tong', 'st:hku'], filler],
       top: 'st:siu-hong',
     });
-    expect(chooseAction(viewFor(s, 'p0'))).toEqual({ type: 'play', cardId: 'wild:octopus:1', chosenLine: 'KTL' });
+    expect(chooseAction(viewFor(s, 'p0'))).toEqual({ type: 'play', cardId: 'wild:octopus:1', chosenLines: ['KTL'] });
   });
 
   it('breaks line ties in network order', () => {
-    expect(chooseLine(['TML', 'ISL'], [card('st:hku'), card('st:heng-on')], ['ISL', 'TML'])).toBe('ISL');
+    expect(chooseLine([['TML'], ['ISL']], [card('st:hku'), card('st:heng-on')], ['ISL', 'TML'])).toEqual(['ISL']);
   });
 
   it('keeps wilds when a station card is playable', () => {
@@ -52,9 +52,9 @@ describe('chooseAction', () => {
     // On ISL 3, only Central is playable; it must go to TWL.
     const s = scenario({ hands: [['st:central', 'st:jordan', 'st:whampoa'], filler], top: 'st:sai-ying-pun' });
     const action = chooseAction(viewFor(s, 'p0'));
-    expect(action).toMatchObject({ type: 'play', cardId: 'st:central', chosenLine: 'TWL' });
+    expect(action).toMatchObject({ type: 'play', cardId: 'st:central', chosenLines: ['TWL'] });
     const r = applyAction(s, 'p0', action);
-    expect(r.ok && r.state.currentLine).toBe('TWL');
+    expect(r.ok && r.state.currentLines).toEqual(['TWL']);
   });
 
   it('stacks a draw card when one is pending, saving the Typhoon', () => {
@@ -113,13 +113,13 @@ describe('chooseAction', () => {
   it('plays Hong Kong with a Central line, choosing the one it holds most of', () => {
     const s = scenario({ hands: [['st:hong-kong', 'st:tai-koo', 'st:hku', 'st:jordan'], filler], top: 'st:kowloon' });
     const action = chooseAction(viewFor(s, 'p0'));
-    expect(action).toMatchObject({ type: 'play', cardId: 'st:hong-kong', chosenLine: 'ISL' });
+    expect(action).toMatchObject({ type: 'play', cardId: 'st:hong-kong', chosenLines: ['ISL'] });
     expect(applyAction(s, 'p0', action).ok).toBe(true);
   });
 
   it('chooses a legal interchange line', () => {
     const s = scenario({ hands: [['st:admiralty', 'st:ocean-park', 'st:lei-tung'], filler], top: 'st:sai-ying-pun' });
     const action = chooseAction(viewFor(s, 'p0'));
-    expect(action).toMatchObject({ type: 'play', cardId: 'st:admiralty', chosenLine: 'SIL' });
+    expect(action).toMatchObject({ type: 'play', cardId: 'st:admiralty', chosenLines: ['SIL'] });
   });
 });
