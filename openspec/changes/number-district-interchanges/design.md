@@ -4,85 +4,148 @@
 
 See proposal.md for why. The current state that shapes the approach:
 
-- `loadNetwork` (`src/data/network.ts`) numbers each line's stops in order, skipping every station on two or more lines. It records `Station.numbers[line]` (null for interchanges) and `Station.interchange`.
-- `buildDeck` (`src/engine/cards.ts`) makes an `interchange` card (lines, no number) for each interchange, and a `station` card (line, number) otherwise.
-- The engine treats "has a number" and "is a station card" as the same thing:
-  - `isPlayable` matches by number only for `station` cards;
-  - `lineChoices` forbids staying for interchanges;
-  - `applyAction` sets the face to none after any interchange;
-  - same-number groups accept only `station` cards.
-- The UI also equates "interchange" with "no number". `LineStrip` decides `interchange = stop.number === null`, and `CardView` draws a ⇄ icon in place of a number on every interchange card.
-- The prototype behind the proposal's figures lives only in a scratch copy, not in the repo. It patched `buildDeck` and `game.ts` directly. This design moves the same rules into the data format and the engine properly.
+- **Main branch.**
+  - London merges the Circle, H&C and Metropolitan into one line, `SSR`, whose `labels` give each part its own colour and coverage.
+  - `loadNetwork` (`src/data/network.ts`) marks a station as an interchange when it is on two or more lines.
+  - `GameState` has one `currentLine: string`. `lineChoices` returns a list of single lines, and a play carries `chosenLine?: string` (also in `src/shared/protocol.ts`).
+- **Working tree.** It holds an uncommitted implementation of this change's earlier version:
+  - `sharedTrack` pairs, `restartAt` and `Station.number`;
+  - numbered interchange cards and their rules;
+  - CardView/LineStrip support for them, the "current line first" line prompt, and tests.
+
+  This design replaces that work. The tasks say what to remove and what to keep.
+- **Online rooms.** They store their whole state in Durable Object storage, including a round's cards and current line (`server/roomObject.ts`). Local rounds are not saved.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Shared-track numbering is network data: Hong Kong declares nothing and behaves exactly as today.
-- One engine rule for numbered interchanges, used by both local and online rounds, with no protocol change.
-- "Is an interchange" and "has a number" become separate properties everywhere they were conflated.
+- Shared-track lines and numbering groups are network data. Hong Kong declares none and plays exactly as on main.
+- A multi-line station is still a `station` card, so same-number groups, hand order and transfers change little.
+- One rule set for local and online rounds.
 
 **Non-Goals:**
-- Changing ordinary interchanges, wilds, or any house rule.
-- The "interchanges keep the previous number" idea. It was simulated as an alternative, but it's a separate rule change for every map.
-- Letting numbered interchanges join same-number groups (see decision 4).
-- Numbering the merged line's single-line stations differently; they keep 1–13.
+- Numbering interchanges. Every interchange, subsurface or not, keeps no number.
+- Showing group names to players, anywhere.
+- Letting wilds or action cards set several lines. They still set one line.
+- Changing Hong Kong, ordinary interchange behaviour, or any house rule.
 
 ## Decisions
 
-### 1. Data format: `sharedTrack` pairs and `restartAt`
-- `NetworkDef` gains `sharedTrack?: { numbering: string; partner: string }[]`.
-- `LineDef` gains `restartAt?: string`.
-- London declares `sharedTrack: [{ numbering: 'DIS', partner: 'SSR' }]`, and the District declares `restartAt: 'aldgate-east'`.
+### 1. Data format: `sharedTrack` with groups
+`NetworkDef` gains:
+
+```ts
+sharedTrack?: {
+  lines: string[];
+  groups: { id: string; trunk: string[]; branches?: BranchDef[] }[];
+}
+```
+
+A group is shaped like a line (trunk plus branches), so the existing route checks and numbering pass serve both.
 
 In `loadNetwork`:
-- **Numbered interchanges:** a station is one when, for some pair, it is on both the numbering and the partner line. It stays `interchange: true`.
-- **Numbering pass:** each line counts its stops in order. A stop gets the next number when it is single-line, or when it is a numbered interchange and this line is its numbering line. Reaching the `restartAt` station resets the count to 1 before numbering it.
-- **What a station records:**
-  - `numbers[numbering line]` is set;
-  - `numbers[partner]` stays null, so the merged line keeps 1–13;
-  - a new `Station.number: number | null` holds the card number: the single-line number, the numbered-interchange number, or null.
+- **Interchanges:** a station is one when its lines, counting every shared-track line as one, number two or more.
+- **Numbering:**
+  - Ordinary lines number their non-interchange stops as today.
+  - Each group numbers its non-interchange stations along its trunk, then its branches.
+  - A group station's number is written to `numbers[line]` for every line serving it, and to `Station.number`.
+  - `Station.group` holds the group id. It decides number order and gallery order, and players never see it.
 
-Validation:
-- a pair must name two different known lines;
-- `restartAt` must be a station on the line that gets a number.
+Validation fails in any of these cases:
+- unknown lines, or fewer than two shared-track lines;
+- a shared-track station in no group or in several;
+- a group station that no shared-track line serves.
 
-*Alternative:* hard-code District/merged-line logic in `buildDeck`, as the prototype did. Rejected because it ties the engine to London ids.
+*Alternative for groups:* derive them from the yes/no/any table. Rejected because the table leaves Paddington and Edgware Road out, and the numbering order still needs data. A London test checks every station against the table instead.
 
-### 2. Cards: an optional number on interchange cards
-The `interchange` card type gains `number?: number`, and `buildDeck` sets it from `Station.number`. No new card kind, so the AI's `cardLines`, hand sorting, the gallery's interchange group, and the server's card handling keep working. Cards cross the wire as plain data, and the protocol has no card schema check, so online needs no change.
-*Alternative:* a new `kind: 'numbered-interchange'`. Rejected because every `switch` on card kind would need a new branch for behaviour that is "interchange, plus a number".
+*Removed from the working tree:* the pair form of `sharedTrack`, `restartAt`, and the numbered-interchange counting.
 
-### 3. Engine rules
-- **`isPlayable`:** an interchange matches by line, or, when it has a number, by number against a number face.
-- **`lineChoices`:** a numbered interchange returns all its lines plus transfer lines, current line first when it's one of them. An ordinary interchange keeps today's "other lines only".
-- **`applyAction`:** numbered interchanges never auto-choose a line, so a missing `chosenLine` is `line-choice-required`. The face becomes `{ kind: 'number', n }`. Ordinary interchanges still set the face to none.
-- **The AI:** needs no rule change. `chooseLine` already picks the allowed line it holds most of, and that can be the current line.
+### 2. London data
+- `SSR` is replaced by three single-label lines in TfL's colours:
+  - `CIR` (#FFD300): the trunk runs Hammersmith (H&C) → Liverpool Street, and the southern half is the loop branch back to Paddington, as it is drawn today;
+  - `H&C` (#F3A9BB): Hammersmith (H&C) → West Ham;
+  - `MET` (#9B0056): Finchley Road → Aldgate, numbered from its north end.
+- Line order follows TfL's alphabetical list: BAK, CEN, CIR, DIS, H&C, JUB, MET, NOR, PIC, VIC.
+- `sharedTrack.lines` is `CIR, H&C, MET, DIS`. That order is also the order of lines on a card and within an option.
+- **Groups:** the five groups are listed in the order the specs give. Group 5's trunk ends at Earl's Court, with the Wimbledon branch and then Olympia as branches.
+- **Transfers:** the two walkway transfers that named `SSR` now name the real lines. Hammersmith (D/P) transfers to `CIR`/`H&C`, and Bank to `CIR`/`DIS`.
 
-### 4. Same-number groups exclude numbered interchanges
-`sameNumberCards` and the extra-card check stay restricted to `station` cards. A numbered interchange would need its own line choice in the middle of a group, and the "play same numbers together" rule is defined for single-line station cards. A numbered interchange can still be the card a group follows, by matching its number on the next turn.
-*Alternative:* allow them in groups. Deferred; it needs a line choice for a mid-group interchange, and simulation didn't call for it.
+### 3. Cards: optional `lines` on station cards
+- A `station` card gains `lines?: string[]`, set only when the station has more than one line. `line` stays the first of them.
+- A helper `cardLines(card)` returns every line of any card. Engine, AI and UI code use it in place of reading `line` or `lines` directly.
+- Interchange cards go back to main's shape: the working tree's `number?` is removed.
 
-### 5. UI: separate "interchange" from "has a number"
-- **`CardView`:** a numbered interchange shows its bands and its number in the number's usual place. A small ⇄ badge sits beside the number, so it still reads as an interchange.
-- **Phone-size cards:** cards with three or more bands (Victoria, Paddington, Embankment) use the tightened band rules from the London change, and a smaller number.
-- **`LineStrip` and `lineLayout`:** `StripStop` gains `interchange: boolean`. A numbered interchange is drawn as an interchange dot with its number instead of ⇄, on both the District and merged-line strips, using `Station.number`.
-- **`format.ts`:** `cardName` and `cardLabel` include the number for numbered interchanges, e.g. "Tower Hill (DIS/CIR·H&C·MET 17)". `handOrder` sorts them among their first line's numbered cards.
-- **Line prompt:** `GameScreen` already opens `LineChooser` whenever `lineChoices` has more than one line. Numbered interchanges always do, with the current line listed first.
+*Alternative:* a new card kind. Rejected because it would need its own branch in same-number groups, transfers, hand sorting and the gallery, for what is "a station card on several lines".
+
+### 4. Several current lines
+- `GameState.currentLine: string` becomes `currentLines: string[]`: one line, or a set of shared-track lines in `sharedTrack.lines` order. The `lineChanged` event carries `lines`.
+- A line option is a `string[]`:
+  - `lineChoices` returns `string[][]`;
+  - a play carries `chosenLines?: string[]`, matched as a set;
+  - `chosenLine` is removed from `game.ts`, `ai.ts`, `protocol.ts` and `GameScreen`.
+
+  Keeping `currentLine` and adding an `alsoCurrent` list was rejected: every reader would have to remember to check both.
+- **`isPlayable`:** a card is "on the current lines" when `cardLines(card)` meets `currentLines`. Number and action matching are unchanged.
+- **Options (`lineChoices`):**
+  - Wild: every line on its own.
+  - Interchange:
+    - each line that isn't shared-track, on its own, plus one option of its shared-track lines;
+    - transfer lines are grouped the same way;
+    - options that share a line with `currentLines` are dropped, and duplicates are dropped.
+  - Transfer station (single- or multi-line): its transfer lines, grouped the same way.
+  - Multi-line station without a transfer: null, so there is no choice.
+- **`applyAction`:**
+  - With no choices, a multi-line station sets `currentLines` to its lines.
+  - Otherwise the chosen or only option becomes `currentLines`.
+  - The face rules are unchanged, and same-number groups need no new code.
+- **The AI:** `chooseLine` scores each option by the hand cards whose `cardLines` meet the option. The tie order is the option's position in `lineChoices`.
+
+### 5. UI
+- **`CardView`:**
+  - A `Band` takes a list of line codes and draws them side by side in one band, as merged bands are drawn today.
+  - A multi-line station card has one band for all its lines.
+  - An interchange card has one band for its shared-track lines, then one band per other line. This keeps King's Cross at four bands, as today.
+  - The numbered-interchange markup and CSS from the working tree are removed.
+- **`LineStrip`:**
+  - It takes `lines: string[]` and always draws one line, so the strip is never taller than a single line's.
+  - With several current lines it draws the first (in `sharedTrack.lines` order) and shows a small tab per current line above the strip (e.g. CIR | DIS). Choosing a tab draws that line. The choice is local display state and resets to the first line whenever the current lines change.
+  - `lineLayout` is unchanged.
+
+  *Alternative:* a merged map drawing every current line in one strip. Rejected: those maps were up to 55 stations across several rows and pushed the hand off a 360×640 screen.
+- **`GameScreen`:**
+  - The current-line label shows each current line's badge.
+  - The top card's station is highlighted when it is on the line the strip is drawing.
+  - The "top card on the current lines" check uses `cardLines`.
+  - `LineChooser` shows an option of several lines as one button with each line's badge and name.
+  - The working tree's current-line-first prompt is removed, since multi-line stations no longer prompt.
+- **`GalleryPage`:**
+  - Station cards on shared-track lines leave the per-line groups for one "Subsurface lines" group (淺層綫), in group order, with a small gap between groups and no headings.
+  - Each shared-track line's group keeps its action cards.
+- **`format.ts`:**
+  - `cardName` and `cardLabel` list every line, e.g. "Sloane Square (CIR·DIS 3)".
+  - `handOrder` sorts a multi-line card under its first line.
+  - Line-change messages name every line ("Now on Circle / District").
+  - The new gallery string is added in both languages.
+
+### 6. Stored rounds
+When a room loads a stored round:
+- **Old state shape:** a round with `currentLine` is converted to `currentLines: [currentLine]`. Hong Kong rounds carry on.
+- **Removed line:** if the round has a card or current line the network no longer has (`SSR`), the room ends that round and returns to its lobby, keeping its players.
+
+*Alternative:* keep `SSR` as a hidden alias. Rejected because an old `SSR` card can't say which of three lines it means.
 
 ## Risks / Trade-offs
 
-- **The same number twice on one line** (District 1–17 appears in both runs) → Players could misread a line strip. → The strip shows both runs in place along the line. The card band shows the line, and matching is by line or number, never by position, so a repeat never makes a play ambiguous.
-- **Crowded phone-size cards** (Embankment has four bands plus a number and a name on an 88 px card) → Check every numbered interchange in the gallery at 360 px. Shrink the number on cards with three or more bands. Fixing any overlap is a task.
-- **Every District card number changes** → Players who learned the old numbers see new ones. → Accepted; London shipped recently.
-- **Longer prompts:** a numbered interchange always asks for a line, even a two-line one played on its own line. → Listing the current line first makes "stay" one tap. Revisit if play-testing finds it tedious.
-- **Simulated, not play-tested:** the figures come from computer players that match by number only when they can't match by line. → Re-run the London simulation in the test suite, and play a few real rounds before merging.
+- **Only one of several current lines is drawn at a time.** → The tabs name every current line, and one tap shows another. The current-line label always shows them all.
+- **Repeated numbers on subsurface lines.** The District's strip shows group 3's 1–5, group 4's 1–10 and group 5's 1–10. → The card band shows the line set. Matching is by line or number, never by position, so a repeat never makes a play ambiguous.
+- **CIR, H&C and MET have no single-line cards**, and multi-line cards make two or three lines current at once. Line-matching on the subsurface becomes easier than elsewhere, and the deck gains 6 action cards (30 of 174, against 24 of 168). → Re-run the London simulation and record turns, number-matching and action share against main.
+- **The state and message shape change.** → The server and client deploy together, and stored rounds are converted (decision 6). Hong Kong rounds keep their behaviour; only the field names change.
+- **The number of every London subsurface card changes.** → Accepted; London shipped recently.
 
 ## Migration Plan
 
-- **Rounds in progress** (local or stored online rooms) keep the cards they were dealt: ordinary interchanges with old District numbers. The new rules only add behaviour for cards with a number, so old decks play exactly as before. New rounds get the new deck.
-- **Deploy order:** the server and client deploy together, as now. An old client receiving a numbered interchange card would ignore its number and render it as an ordinary interchange. That's acceptable for one deploy cycle.
-- **Rollback:** reverting the change restores the old numbering. Rounds dealt with numbered interchanges would then play them as ordinary interchanges.
-
-## Open Questions
-
-- Whether the "stay or switch" prompt should become a single tap for two-line numbered interchanges played on their own line. This can be decided after play-testing without changing the specs' outcome, since staying is already allowed.
+- **Deploy order:** the server and client deploy together, as now. `PROTOCOL_VERSION` goes from 1 to 2, so the server refuses a client still open from before the deploy with its existing "version" refusal, and a reload fixes it.
+- **Rounds in progress:** see decision 6. Local rounds aren't saved.
+- **Rollback:**
+  - Reverting restores `currentLine`. Rounds saved under the new shape would then not load.
+  - Mitigation: put the decision 6 conversion in its own commit, written so it can also convert `currentLines` back to its first line. On rollback, keep that commit.

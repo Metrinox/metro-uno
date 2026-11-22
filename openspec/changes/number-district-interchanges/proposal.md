@@ -4,20 +4,29 @@
 
 London has far more interchanges than Hong Kong: 50 of 136 stations (37%), against 17 of 98 (17%). An interchange has no number, so after one is played the next player can match only by line. In simulated four-player rounds, number-matching is off on 38% of London turns against 22% in Hong Kong, and players match by number less often (12% of plays against 17%). Rounds play more like "follow the colour" than UNO.
 
-Most of those interchanges are District stations shared with the Circle, Hammersmith & City or Metropolitan (merged in the game as one line). These lines share track and platforms through central London. Giving those stations a number brings London in line with Hong Kong. In simulation, number-matching is off on 22.5% of turns, 14.9% of plays match by number, and rounds are about 9% shorter (322 turns against 354).
+Most of those interchanges are stations where the subsurface lines (Circle, Hammersmith & City, Metropolitan, District) share track and platforms. Riders don't think of them as changing line. If stations served only by subsurface lines stop counting as interchanges, London drops to 34 interchanges of 136 (25%). Each of those stations then has a number.
 
 ## What Changes
 
-- **Numbered interchanges.** A network may name pairs of lines that share track. A station served by both lines of a pair is still an interchange, but it also has a number, taken from the first line of the pair. In London the pair is District + the merged CIR · H&C · MET line, which makes 25 numbered interchanges. Examples: Tower Hill, Sloane Square, Victoria, Paddington. Hong Kong has no such pairs and is unchanged.
-- **Numbering restarts.** A line may restart its numbering at 1 from a named station. The District numbers Turnham Green → Tower Hill as 1–17, then restarts at Aldgate East: 1–18 through the East End and its three branches. Its numbers then stay in the same range as the other London lines (up to 19) instead of reaching 34. **This relaxes the rule that no two stations on one line share a number.** On the District each number up to 17 appears twice.
-- **District renumbered.** Every District station's number changes, since the numbered interchanges now count. The merged line's numbers are unchanged; its numbered interchanges carry their District number.
-- **Playing a numbered interchange.**
-  - It is playable on any of its lines, or by matching its number.
-  - The player chooses any of its lines, including staying on the current one.
-  - Its number becomes the face, so the next player can match by number.
-  - Ordinary interchanges are unchanged: they still must switch line and clear the face.
-- **Display.** A numbered interchange card shows its lines' bands and its number, marked as an interchange. The line strip shows its number in an interchange-style dot. The line prompt offers all its lines, current line first.
-- **Computer players** choose a line for a numbered interchange the same way they do for any interchange.
+- **BREAKING: Circle, Hammersmith & City and Metropolitan become separate lines.** The merged CIR · H&C · MET line is removed. London has 10 lines: Bakerloo, Central, Circle, District, Hammersmith & City, Jubilee, Metropolitan, Northern, Piccadilly, Victoria. Each subsurface line has its own colour, line strip and action cards.
+- **Subsurface stations don't count as interchanges among themselves.** A network may name a set of shared-track lines. For deciding interchanges they count as one line. Sloane Square (Circle + District) is a plain station. Victoria (Circle + District + Victoria) is still an interchange, and like every interchange it has no number.
+- **Five numbering groups.** London sorts every subsurface station into one of five groups, by which subsurface lines serve it:
+
+  | Group | Circle | H&C | Met | District | Stations |
+  |---|---|---|---|---|---|
+  | 1 | yes | yes | no | no | Hammersmith (H&C) … Royal Oak, plus Paddington and Edgware Road (Circle), which also have the District |
+  | 2 | any | any | yes | no | Finchley Road … Aldgate |
+  | 3 | no | yes | no | yes | Aldgate East … West Ham |
+  | 4 | yes | no | no | yes | Bayswater … Tower Hill |
+  | 5 | no | no | no | yes | Turnham Green … Earl's Court and the District's branches |
+
+  Each group numbers its plain stations 1, 2, 3 … in its own order and skips interchanges, the same way a line is numbered. So a number repeats on a subsurface line when its stations fall in different groups.
+- **Multi-line station cards.** A plain station on more than one subsurface line gets one card that shows all its lines side by side in one band, plus its group number. Examples: Goldhawk Road is CIR | H&C 2, Aldgate is CIR | MET 5, Sloane Square is CIR | DIS 3. It can be played on any of its lines, or by matching its number. Nobody chooses a line: all its lines become current together, so the next player can play a card on either line, or the same number.
+- **BREAKING: several lines can be current at once.** The game tracks one current line or a set of shared-track lines. An interchange offers its subsurface lines as one option. Victoria played from the Victoria line makes the Circle and District current together, and needs no prompt. Wilds and action cards still set one line.
+- **The District's numbers change.** The District is now numbered through its groups (3, 4 and 5) rather than as one line. The Aldgate East restart and the "numbered interchange" from the earlier version of this change are dropped.
+- **Maps.** Each subsurface line has its own line strip. When several lines are current, the strip shows one of them, with a tab per current line to switch between their maps. There are no merged maps, so the strip is never taller than one line's.
+- **Gallery.** A new "Subsurface lines" section (淺層綫) shows every subsurface station's card group after group, without naming the groups. Action cards stay in their own lines' sections.
+- **Computer players** choose among an interchange's options the same way as now, counting a card as matching an option when it is on any of the option's lines.
 
 ## Capabilities
 
@@ -28,22 +37,40 @@ None.
 ### Modified Capabilities
 
 - `transit-network-data`:
-  - shared-track line pairs and numbered interchanges;
-  - numbering restarts;
-  - the District / merged-line pair and the Aldgate East restart for London;
-  - an exception to unique numbers per line.
-- `card-deck`: numbered interchange cards carry a number.
-- `game-rules`: how numbered interchanges are played, and the line and face they set.
-- `game-ui`: how numbered interchange cards, line-strip stops, and the line prompt look.
+  - shared-track lines that don't make interchanges among themselves;
+  - numbering groups;
+  - London's separate Circle, H&C and Metropolitan lines (replacing the merged line);
+  - London's five groups;
+  - repeated numbers on a shared-track line.
+- `card-deck`: multi-line station cards; London's deck size.
+- `game-rules`:
+  - several current lines;
+  - multi-line station plays;
+  - interchange and transfer options that keep shared-track lines together;
+  - same-number groups.
+- `game-ui`:
+  - several current lines on the table, and the line strip's tabs;
+  - multi-line station cards and subsurface interchange cards;
+  - the line prompt;
+  - the gallery's Subsurface lines section.
+- `ai-opponents`: choosing among options of several lines.
 
 ## Impact
 
-- **Data:** `src/data/network.ts` gains `sharedTrack` on `NetworkDef` and `restartAt` on `LineDef`, plus loader validation. `src/data/london-underground.ts` sets the District pair and restart.
+- **Data:**
+  - `src/data/network.ts` gains shared-track lines and numbering groups, with validation.
+  - `src/data/london-underground.ts` replaces the merged line with three lines and declares the five groups.
 - **Engine:**
-  - `src/engine/cards.ts`: interchange cards gain an optional `number`.
-  - `src/engine/game.ts`: playability, line choices, and the face after play.
-  - The AI needs no change beyond what `lineChoices` returns.
-- **UI:** `CardView` (number on interchange cards, including phone-size layout), `LineStrip` (numbered interchange dots), `format.ts` (card names and labels), `GameScreen` (line prompt for numbered interchanges).
-- **Server and protocol:** no message changes; cards already travel as data. Rounds already in progress keep the deck they were dealt.
-- **Tests:** data, deck, rules, AI, card display and line strip tests. The London simulation is re-run with the new expectations.
-- **Players:** every District card number changes, and London rounds play differently. Hong Kong is unchanged.
+  - `src/engine/cards.ts`: station cards may list several lines.
+  - `src/engine/game.ts`: the current line becomes a list of lines; line options become sets of lines; playability, face, same-number groups.
+  - `src/engine/ai.ts`: scoring options of several lines.
+- **UI:**
+  - `CardView`: multi-line bands, and subsurface lines sharing one band on interchange cards.
+  - `LineStrip`: a tab per current line.
+  - `GameScreen` and `LineChooser`: several current lines, and options of several lines.
+  - `GalleryPage`: the Subsurface lines section.
+  - `format.ts`: names, labels, hand order and event messages.
+- **Replaces work in progress:** the numbered-interchange implementation in the working tree (`sharedTrack` pairs, `restartAt`, numbered interchange cards) is replaced, not shipped.
+- **Server and protocol:** the game state and the play message change shape: there are several current lines, and a chosen option can be several lines. Server and client deploy together. Stored rounds are converted or ended (see design).
+- **Tests:** data, deck, rules, AI, card display, line strip, gallery and e2e tests. The London simulation is re-run and its figures recorded.
+- **Players:** London's subsurface cards, colours and numbers all change. Hong Kong is unchanged.

@@ -1,32 +1,100 @@
 # Tasks
 
-## 1. Data format and London numbering
+The working tree holds an implementation of this change's earlier version (numbered interchanges). Each task below says what to keep from it and what to remove.
 
-- [ ] 1.1 Add `sharedTrack` to `NetworkDef`, `restartAt` to `LineDef`, and `Station.number` in `src/data/network.ts`; number stops per design decision 1 (numbered interchanges count on their numbering line, the count resets at `restartAt`, partner-line numbers unchanged); verify with `network.test.ts` cases on a small test network: a paired station is an interchange with its numbering-line number, a restart resets the count, unknown/duplicate pair lines and an unnumbered or off-line `restartAt` fail to load
-- [ ] 1.2 Declare `sharedTrack: [{ numbering: 'DIS', partner: 'SSR' }]` and the District's `restartAt: 'aldgate-east'` in `src/data/london-underground.ts`; verify with `london-underground.test.ts` cases for every new transit-network-data scenario (Tower Hill 17, Victoria 8, King's Cross and Earl's Court unnumbered, exactly 25 numbered interchanges, Turnham Green 1 / Tower Hill 17 / Aldgate East 1 / Kensington (Olympia) 18, no District number above 18, Gloucester Road and Bow Road both 5, merged line still 1–13), and that `hk-mtr.test.ts` still passes with no numbered interchanges
+## 1. Data format and London data
+
+- [ ] 1.1 Replace the pair form of `sharedTrack`, `restartAt`, and numbered-interchange counting in `src/data/network.ts` with `sharedTrack: { lines, groups }`, `Station.group` and group numbering (design decision 1); keep `Station.number`. Verify with `network.test.ts` cases on a small test network:
+  - a station on two shared-track lines only is not an interchange;
+  - a station also on another line is an unnumbered interchange;
+  - group numbering skips interchanges and carries on through branches;
+  - a group station has its group number on every line serving it;
+  - loading fails for an unknown or single shared-track line;
+  - loading fails for a station in no group or in two, and for a group station no shared-track line serves.
+
+  Remove the earlier pair and restart cases.
+- [ ] 1.2 Replace `SSR` with `CIR`, `H&C` and `MET` in `src/data/london-underground.ts`, declare `sharedTrack` with the five groups, and repoint the Hammersmith and Bank transfers (design decision 2); update the file's header comment. Verify with `london-underground.test.ts` cases for every changed transit-network-data scenario:
+  - 10 lines;
+  - each subsurface station in the group the table gives (Paddington and Edgware Road in group 1);
+  - the group numbers in the "Group numbers" scenario;
+  - 34 interchanges;
+  - Sloane Square and Goldhawk Road not interchanges, and Victoria an unnumbered interchange;
+  - Whitechapel and High Street Kensington both 2 on the District;
+  - the West Ham and walkway-transfer scenarios.
+
+  Also check that `hk-mtr.test.ts` still passes with no shared-track lines.
 
 ## 2. Deck and engine rules
 
-- [ ] 2.1 Add `number?` to interchange cards and set it in `buildDeck`; verify with `cards.test.ts`: Tower Hill card has 17, Admiralty has none, London still 168 cards with 25 numbered and 25 ordinary interchange cards
-- [ ] 2.2 Update `isPlayable`, `lineChoices` and `applyAction` in `src/engine/game.ts` per design decision 3; verify with `game.test.ts` cases for each game-rules scenario (stay, switch, play by number from another line, missing line choice rejected, choice outside the card's lines rejected, face set to the number) and the unchanged Admiralty/North Point scenarios
-- [ ] 2.3 Keep numbered interchanges out of same-number groups (design decision 4); verify with a `game.test.ts` case that grouping Sloane Square with a station card numbered 7 is rejected
-- [ ] 2.4 Check the AI with numbered interchanges; verify with an `ai.test.ts` case that a computer player playing Tower Hill picks the line it holds most cards of, including staying on the District
-- [ ] 2.5 Update the London expectations in `simulate.test.ts` if needed and run it; verify London rounds still finish within the limits, and record turns per round and plays by number against the proposal's figures (about 322 turns and 15%)
+- [ ] 2.1 Add `lines?` to station cards and a `cardLines` helper in `src/engine/cards.ts`, set it in `buildDeck`, and remove `number?` from interchange cards. Verify with `cards.test.ts`:
+  - Goldhawk Road lists CIR and H&C with number 2;
+  - Aldgate lists CIR and MET with 5;
+  - Victoria is an unnumbered interchange;
+  - London has 174 cards: 34 interchange, 29 multi-line, 73 single-line;
+  - Hong Kong still has 130.
+- [ ] 2.2 Replace `currentLine` with `currentLines`, `chosenLine` with `chosenLines`, and make `lineChoices` return options of several lines in `src/engine/game.ts` and `src/shared/protocol.ts` (design decision 4); update `test-helpers.ts`. Verify that every existing Hong Kong `game.test.ts` case passes, rewritten only for the new field names.
+- [ ] 2.3 Implement the multi-line station, interchange, transfer and line action rules (design decision 4), and remove the numbered-interchange rules and their tests. Verify with a `game.test.ts` case for each scenario in:
+  - "Multi-line station plays";
+  - "Current line and face";
+  - "Legal station plays";
+  - "Interchange plays and line choice", including Victoria both ways and King's Cross;
+  - "Transfer plays", including Monument and Bank;
+  - "Line action plays".
+- [ ] 2.4 Check same-number groups that end on a multi-line card. Verify with a `game.test.ts` case for "Ending on a multi-line card".
+- [ ] 2.5 Score options of several lines in the AI's line choice (`src/engine/ai.ts`). Verify with an `ai.test.ts` case for the "Shared-track option" scenario, and the existing Octopus case.
+- [ ] 2.6 Convert or end stored rounds on load (design decision 6, `server/room.ts`/`roomObject.ts`), in its own commit. Verify with room tests:
+  - a stored Hong Kong round with `currentLine` loads with `currentLines` and plays on;
+  - a stored London round with an `SSR` card loads into the lobby with its players.
+- [ ] 2.7 Update the London expectations in `simulate.test.ts` and run it. Verify that London rounds still finish within the limits. Record turns per round, share of plays by number, share of turns with no number face, and action-card share, against main's figures (354 turns, 12%, 38%).
 
 ## 3. Display
 
-- [ ] 3.1 Separate "interchange" from "has a number" in `lineLayout.ts` and `LineStrip.tsx` (`StripStop.interchange`, numbered interchanges drawn as interchange dots with their number on both lines' strips); verify with a `lineLayout.test.ts` case for Tower Hill on the District and merged-line layouts, and that Hong Kong strips are unchanged
-- [ ] 3.2 Show the number and a ⇄ badge on numbered interchange cards in `CardView.tsx` and `styles.css`; verify with `CardView.test.tsx` (Victoria shows 8, its three lines and an interchange mark; Admiralty unchanged)
-- [ ] 3.3 Include the number in `cardName`/`cardLabel` and sort numbered interchanges by number in `handOrder` (`src/ui/i18n/format.ts`); verify with `i18n.test.tsx` cases in English and Chinese
-- [ ] 3.4 Make the line prompt list the current line first for numbered interchanges and always ask; verify with a screen test that playing Tower Hill on the District offers District then the merged line, and North Point still changes line without a prompt
-- [ ] 3.5 Review every numbered interchange card and the District and merged-line strips in the gallery at 360 px and 1280 px (Embankment, Victoria, Paddington, Westminster in particular), and fix any overlap; verify by screenshots showing no overlap and no sideways scrolling
+- [ ] 3.1 Make `LineStrip` take `lines: string[]` and draw one current line at a time, the first in shared-track order, with a tab per current line to switch (design decision 5). Verify with `lineLayout.test.ts` cases:
+  - the Circle has its loop and no Finchley Road or Whitechapel;
+  - the Metropolitan runs Finchley Road to Aldgate, numbered 1–5;
+  - Sloane Square is a numbered stop on the District;
+  - Hong Kong layouts are unchanged.
+
+  And with a `LineStrip.test.tsx`:
+  - Circle and District current shows the Circle with tabs CIR and DIS;
+  - choosing DIS shows the District with Sloane Square highlighted;
+  - one current line shows no tabs.
+- [ ] 3.2 Draw multi-line bands and shared-track interchange bands in `CardView.tsx` and `styles.css`, and remove the numbered-interchange markup and CSS. Verify with `CardView.test.tsx`:
+  - Goldhawk Road shows CIR and H&C in one band, 2, and no interchange mark;
+  - King's Cross shows one CIR/H&C/MET band, then NOR, PIC and VIC bands;
+  - Admiralty is unchanged.
+- [ ] 3.3 List every line in `cardName`/`cardLabel`, sort multi-line cards under their first line in `handOrder`, and name every line in line-change messages (`src/ui/i18n/format.ts`); remove the numbered-interchange forms. Verify with `i18n.test.tsx` cases in English and Chinese.
+- [ ] 3.4 Update `GameScreen` and `LineChooser`:
+  - show the current lines' badges;
+  - pass `currentLines` to the strip;
+  - show options of several lines as one choice;
+  - send `chosenLines`;
+  - remove the current-line-first prompt.
+
+  Verify with `GameScreen.test.tsx`:
+  - Sloane Square plays with no prompt and shows Circle and District as current, with the Circle strip and a District tab;
+  - King's Cross from the Northern offers three choices, the first showing CIR, H&C and MET;
+  - Victoria from the Victoria line plays with no prompt;
+  - North Point still changes line with no prompt.
+- [ ] 3.5 Add the "Subsurface lines" (淺層綫) card group to `GalleryPage.tsx`, keeping action cards in their lines' groups (design decision 5). Verify with `GalleryPage.test.tsx`:
+  - London shows 10 lines and 174 cards, each card once;
+  - the Subsurface group runs Hammersmith (H&C) to Kensington (Olympia), with no group names;
+  - the CIR, DIS, H&C and MET groups each hold only their three action cards;
+  - the Chinese heading is 淺層綫;
+  - Hong Kong is unchanged at 130 cards.
+- [ ] 3.6 Review the gallery and a London round at 360×640 and 1280×800, and fix any problem found. In particular:
+  - King's Cross, Baker Street, Paddington and Hammersmith (H&C), whose bands come with a transfer marker;
+  - the four subsurface line maps and the strip's tabs;
+  - the table with two and three current lines.
+
+  Verify by screenshots showing no overlap, no sideways page scrolling, and the whole table visible without scrolling at 360×640.
 
 ## 4. Final checks
 
-- [ ] 4.1 Add an e2e case in `e2e/game.spec.ts`: in a London round, a numbered interchange in hand is playable by its number from another line and the line prompt appears; verify `npm run e2e -- game.spec.ts` passes
-- [ ] 4.2 Run `npx tsc -b`, `npm run lint`, `npm test`, and `npm run e2e`; verify they all pass
+- [ ] 4.1 Replace the numbered-interchange e2e case in `e2e/game.spec.ts`. In a London round, a multi-line station in hand is playable by its number from another line, plays without a prompt, and leaves both its lines current, with a tab to show each line's map. Verify that `npm run e2e -- game.spec.ts` passes.
+- [ ] 4.2 Run `npx tsc -b`, `npm run lint`, `npm test` (which includes the worker tests), and `npm run e2e`. Verify that they all pass.
 
 ## Workflow follow-up
 
-- Play a few real London rounds with the change before merging; the figures come from computer players.
-- Archive the change with `/opsx:archive` after review, then check the main specs picked up the deltas.
+- Play a few real London rounds before merging; the figures come from computer players.
+- Archive the change with `/opsx:archive` after review, then check the main specs picked up the deltas, including the removed merged-line requirement.
