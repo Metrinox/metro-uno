@@ -41,7 +41,7 @@ The working tree holds an implementation of this change's earlier version (numbe
   - "Transfer plays", including Monument and Bank;
   - "Line action plays".
 - [x] 2.4 Check same-number groups that end on a multi-line card. Verify with a `game.test.ts` case for "Ending on a multi-line card".
-- [ ] 2.5 Score options of several lines in the AI's line choice (`src/engine/ai.ts`). Verify with an `ai.test.ts` case for the "Shared-track option" scenario, and the existing Octopus case.
+- [x] 2.5 Score options of several lines in the AI's line choice (`src/engine/ai.ts`). Verify with an `ai.test.ts` case for the "Shared-track option" scenario, and the existing Octopus case.
 - [ ] 2.6 Convert or end stored rounds on load (design decision 6, `server/room.ts`/`roomObject.ts`), in its own commit. Verify with room tests:
   - a stored Hong Kong round with `currentLine` loads with `currentLines` and plays on;
   - a stored London round with an `SSR` card loads into the lobby with its players.

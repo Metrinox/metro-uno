@@ -1,6 +1,6 @@
 import { chooseAction, chooseLine } from './ai';
-import { applyAction, viewFor } from './game';
-import { card, scenario } from './test-helpers';
+import { applyAction, lineChoices, viewFor } from './game';
+import { card, lu, scenario } from './test-helpers';
 
 // None of these match ISL or the number 3 used below.
 const filler = ['st:jordan', 'st:whampoa', 'st:kwai-fong'];
@@ -115,6 +115,29 @@ describe('chooseAction', () => {
     const action = chooseAction(viewFor(s, 'p0'));
     expect(action).toMatchObject({ type: 'play', cardId: 'st:hong-kong', chosenLines: ['ISL'] });
     expect(applyAction(s, 'p0', action).ok).toBe(true);
+  });
+
+  it('scores an option of several shared-track lines by every card on any of them', () => {
+    // On the Northern: one Piccadilly card, a Circle card (Sloane Square) and a Met card (Aldgate).
+    const s = scenario({
+      network: lu,
+      hands: [['st:kings-cross-st-pancras', 'st:caledonian-road', 'st:sloane-square', 'st:aldgate'], ['st:borough', 'st:oval']],
+      top: 'st:angel',
+      face: { kind: 'none' },
+    });
+    expect(chooseAction(viewFor(s, 'p0'))).toEqual({
+      type: 'play',
+      cardId: 'st:kings-cross-st-pancras',
+      chosenLines: ['CIR', 'H&C', 'MET'],
+    });
+    // Cards count on any line of the option, not just its first: Whitechapel (H&C) and
+    // Finchley Road (Met) outnumber one Piccadilly card, though neither is on the Circle.
+    const offCircle = ['st:whitechapel', 'st:finchley-road', 'st:caledonian-road'].map((id) => card(id, lu));
+    const options = lineChoices(card('st:kings-cross-st-pancras', lu), viewFor(s, 'p0'))!;
+    expect(chooseLine(options, offCircle, lu.lines.map((l) => l.code))).toEqual(['CIR', 'H&C', 'MET']);
+    // With two Piccadilly cards and one subsurface card, it takes the Piccadilly.
+    const rest = ['st:caledonian-road', 'st:holloway-road', 'st:sloane-square'].map((id) => card(id, lu));
+    expect(chooseLine(options, rest, lu.lines.map((l) => l.code))).toEqual(['PIC']);
   });
 
   it('chooses a legal interchange line', () => {
