@@ -1,5 +1,6 @@
 import type { Network, WildTheme } from '../../data/network';
-import type { Card, WildType } from '../../engine/cards';
+import { cardLines, type Card, type WildType } from '../../engine/cards';
+import { lineOptions } from '../../engine/game';
 import { localName, type Dict, type Lang } from './i18n';
 
 /** Black or white text, whichever reads better on `hex`. */
@@ -23,6 +24,11 @@ export function lineName(network: Network, code: string, lang: Lang): string {
   return line ? localName(line.name, lang) : code;
 }
 
+/** Names of one or more current lines, e.g. "Circle / District". */
+export function linesName(network: Network, codes: readonly string[], lang: Lang): string {
+  return codes.map((c) => lineName(network, c, lang)).join(' / ');
+}
+
 export function stationName(network: Network, id: string, lang: Lang): string {
   const station = network.stations[id];
   return station ? localName(station.name, lang) : id;
@@ -37,9 +43,12 @@ export function wildTheme(network: Network, wild: WildType): WildTheme {
 export function cardName(card: Card, network: Network, lang: Lang, t: Dict): string {
   switch (card.kind) {
     case 'station':
-      return `${stationName(network, card.stationId, lang)} (${lineCode(network, card.line)} ${card.number})`;
-    case 'interchange':
-      return `${stationName(network, card.stationId, lang)} (${card.lines.map((l) => lineCode(network, l)).join('/')})`;
+      return `${stationName(network, card.stationId, lang)} (${cardLines(card).map((l) => lineCode(network, l)).join('·')} ${card.number})`;
+    case 'interchange': {
+      // Shared-track lines are grouped as on the card: "CIR·H&C·MET/NOR/PIC/VIC".
+      const groups = lineOptions(card.lines, network.sharedLines).map((o) => o.map((l) => lineCode(network, l)).join('·'));
+      return `${stationName(network, card.stationId, lang)} (${groups.join('/')})`;
+    }
     case 'action':
       return `${lineCode(network, card.line)} ${t.actionName[card.action]}`;
     case 'wild':
@@ -51,7 +60,7 @@ export function cardName(card: Card, network: Network, lang: Lang, t: Dict): str
 export function cardLabel(card: Card, network: Network, lang: Lang, t: Dict): string {
   switch (card.kind) {
     case 'station': {
-      const base = `${stationName(network, card.stationId, lang)}, ${lineName(network, card.line, lang)} ${card.number}`;
+      const base = `${stationName(network, card.stationId, lang)}, ${linesName(network, cardLines(card), lang)} ${card.number}`;
       const to = network.stations[card.stationId]?.transfer?.to;
       return to ? `${base}. ${t.transferTo(stationName(network, to, lang))}` : base;
     }

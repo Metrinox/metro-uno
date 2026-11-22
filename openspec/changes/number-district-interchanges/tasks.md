@@ -72,7 +72,7 @@ The working tree holds an implementation of this change's earlier version (numbe
   - Goldhawk Road shows CIR and H&C in one band, 2, and no interchange mark;
   - King's Cross shows one CIR/H&C/MET band, then NOR, PIC and VIC bands;
   - Admiralty is unchanged.
-- [ ] 3.3 List every line in `cardName`/`cardLabel`, sort multi-line cards under their first line in `handOrder`, and name every line in line-change messages (`src/ui/i18n/format.ts`); remove the numbered-interchange forms. Verify with `i18n.test.tsx` cases in English and Chinese.
+- [x] 3.3 List every line in `cardName`/`cardLabel`, sort multi-line cards under their first line in `handOrder`, and name every line in line-change messages (`src/ui/i18n/format.ts`); remove the numbered-interchange forms. Verify with `i18n.test.tsx` cases in English and Chinese.
 - [ ] 3.4 Update `GameScreen` and `LineChooser`:
   - show the current lines' badges;
   - pass `currentLines` to the strip;

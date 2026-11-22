@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { act, render, screen } from '@testing-library/react';
 import { dictionaries, loadLang, localName, saveLang } from './i18n';
-import { cardLabel, cardName, lineName, stationName } from './format';
+import { cardLabel, cardName, handOrder, lineName, linesName, stationName } from './format';
+import { buildDeck } from '../../engine/cards';
 import { loadNetwork } from '../../data/network';
 import { networkOrDefault } from '../../data/networks';
 import type { Card } from '../../engine/cards';
@@ -47,6 +48,36 @@ describe('i18n', () => {
     expect(cardName(octopus, hk, 'zh', dictionaries.zh)).toBe('八達通');
     expect(cardLabel(typhoon, hk, 'zh', dictionaries.zh)).toBe('八號風球');
     expect('wildName' in dictionaries.en).toBe(false);
+  });
+
+  describe('London subsurface cards', () => {
+    const lu = networkOrDefault('london-underground');
+    const deck = buildDeck(lu);
+    const pick = (id: string) => deck.find((c) => c.id === `st:${id}`)!;
+
+    it('lists every line of a multi-line station in its name and label, in both languages', () => {
+      expect(cardName(pick('sloane-square'), lu, 'en', dictionaries.en)).toBe('Sloane Square (CIR·DIS 3)');
+      expect(cardLabel(pick('sloane-square'), lu, 'en', dictionaries.en)).toBe('Sloane Square, Circle / District 3');
+      expect(cardName(pick('sloane-square'), lu, 'zh', dictionaries.zh)).toBe('Sloane Square (CIR·DIS 3)');
+      expect(cardLabel(pick('sloane-square'), lu, 'zh', dictionaries.zh)).toBe('Sloane Square, Circle / District 3');
+    });
+
+    it('groups an interchange\'s shared-track lines in its name', () => {
+      expect(cardName(pick('kings-cross-st-pancras'), lu, 'en', dictionaries.en)).toBe(
+        "King's Cross St Pancras (CIR·H&C·MET/NOR/PIC/VIC)",
+      );
+    });
+
+    it('names every current line in a line change, in both languages', () => {
+      expect(dictionaries.en.ev.lineChanged(linesName(lu, ['CIR', 'DIS'], 'en'))).toBe('Now on the Circle / District');
+      expect(dictionaries.zh.ev.lineChanged(linesName(lu, ['CIR', 'DIS'], 'zh'))).toBe('現在是Circle / District');
+    });
+
+    it('sorts a multi-line card under its first line, by number', () => {
+      // Circle: Bayswater 1 and Sloane Square 3 (Circle + District), Royal Oak 8 (Circle + H&C).
+      const hand = ['royal-oak', 'sloane-square', 'parsons-green', 'bayswater'].map(pick);
+      expect(hand.sort(handOrder(lu)).map((c) => c.id)).toEqual(['st:bayswater', 'st:sloane-square', 'st:royal-oak', 'st:parsons-green']);
+    });
   });
 
   it('has the same keys in both dictionaries', () => {

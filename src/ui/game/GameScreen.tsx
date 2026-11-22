@@ -3,7 +3,7 @@ import type { Network } from '../../data/network';
 import type { Card } from '../../engine/cards';
 import { canPlay, isPlayable, lineChoices, sameNumberCards } from '../../engine/game';
 import { CardView } from '../cards/CardView';
-import { cardName, handOrder, lineName } from '../i18n/format';
+import { cardName, handOrder, linesName } from '../i18n/format';
 import type { Dict, Lang } from '../i18n/i18n';
 import { LangToggle } from '../i18n/LangToggle';
 import { ThemeToggle } from '../theme/ThemeToggle';
@@ -33,7 +33,7 @@ function describe(item: LogItem, network: Network, t: Dict, lang: Lang, who: Who
     case 'played':
       return t.ev.played(who(item.player), cardName(item.card, network, lang, t));
     case 'lineChanged':
-      return t.ev.lineChanged(lineName(network, item.lines[0]!, lang));
+      return t.ev.lineChanged(linesName(network, item.lines, lang));
     case 'unoCalled':
       return t.ev.unoCalled(who(item.player));
     case 'drew':
