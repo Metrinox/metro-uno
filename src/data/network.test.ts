@@ -1,4 +1,4 @@
-import { loadNetwork, NetworkError } from './network';
+import { loadNetwork, NetworkError, type NetworkDef } from './network';
 import { tinyDef } from './tiny-network';
 
 const n = (en: string) => ({ en, zh: en + '站' });
@@ -95,5 +95,76 @@ describe('loadNetwork', () => {
       lines: [tinyDef.lines[0]!, { ...tinyDef.lines[1]!, branches: [{ from: 'a1', stations: ['b3'] }] }],
     };
     expect(() => loadNetwork(bad)).toThrow(/branch from "a1"/);
+  });
+
+  it('gives every station a card number, and none to an ordinary interchange', () => {
+    expect(net.stations.a1!.number).toBe(1);
+    expect(net.stations.b3!.number).toBe(net.stations.b3!.numbers.B);
+    expect(net.stations.x!.number).toBeNull();
+  });
+
+  describe('shared-track lines', () => {
+    // S1 and S2 share track: p (S1), q (S1+S2), r (S1+S2+Z), s and t (S2, t on a branch).
+    const sharedDef: NetworkDef = {
+      id: 'shared',
+      name: n('Shared'),
+      wilds: tinyDef.wilds,
+      stations: { p: n('P'), q: n('Q'), r: n('R'), s: n('S'), t: n('T'), z: n('Z') },
+      lines: [
+        { code: 'S1', name: n('Line S1'), colour: '#111111', trunk: ['p', 'q', 'r'] },
+        { code: 'S2', name: n('Line S2'), colour: '#222222', trunk: ['q', 'r', 's'], branches: [{ from: 's', stations: ['t'] }] },
+        { code: 'Z', name: n('Line Z'), colour: '#333333', trunk: ['r', 'z'] },
+      ],
+      sharedTrack: {
+        lines: ['S1', 'S2'],
+        groups: [
+          { id: 'g1', trunk: ['p', 'q', 'r'] },
+          { id: 'g2', trunk: ['s'], branches: [{ from: 's', stations: ['t'] }] },
+        ],
+      },
+    };
+    const shared = loadNetwork(sharedDef);
+    const withShared = (sharedTrack: Partial<NetworkDef['sharedTrack']>) =>
+      loadNetwork({ ...sharedDef, sharedTrack: { ...sharedDef.sharedTrack!, ...sharedTrack } });
+
+    it('makes a station on shared-track lines only a plain station on all of them', () => {
+      const q = shared.stations.q!;
+      expect(q.interchange).toBe(false);
+      expect(q.lines).toEqual(['S1', 'S2']);
+      expect(q.number).toBe(2);
+      expect(q.numbers).toEqual({ S1: 2, S2: 2 });
+    });
+
+    it('keeps a shared-track station on another line an unnumbered interchange', () => {
+      expect(shared.stations.r!.interchange).toBe(true);
+      expect(shared.stations.r!.number).toBeNull();
+    });
+
+    it('numbers each group on its own, skipping interchanges and running on through branches', () => {
+      expect(['p', 'q', 'r', 's', 't'].map((id) => shared.stations[id]!.number)).toEqual([1, 2, null, 1, 2]);
+      expect(shared.stations.s!.group).toBe('g2');
+      expect(shared.stations.z!.group).toBeNull();
+      expect(shared.groups).toEqual([
+        { id: 'g1', stationIds: ['p', 'q', 'r'] },
+        { id: 'g2', stationIds: ['s', 't'] },
+      ]);
+      // Line strips show the group numbers.
+      expect(shared.lineByCode.S2!.stops.map((s) => s.number)).toEqual([2, null, 1, 2]);
+    });
+
+    it('rejects bad shared-track lines', () => {
+      expect(() => withShared({ lines: ['S1', 'Q9'] })).toThrow(/Shared-track line "Q9"/);
+      expect(() => withShared({ lines: ['S1'] })).toThrow(/at least two different lines/);
+    });
+
+    it('rejects a station in no group or two, and a group station off the shared lines', () => {
+      expect(() => withShared({ groups: [{ id: 'g1', trunk: ['p', 'q', 'r'] }] })).toThrow(/Station "s" is on a shared-track line but in no group/);
+      expect(() => withShared({ groups: [...sharedDef.sharedTrack!.groups, { id: 'g3', trunk: ['q'] }] })).toThrow(
+        /"q" is in groups g1 and g3/,
+      );
+      expect(() => withShared({ groups: [...sharedDef.sharedTrack!.groups, { id: 'g3', trunk: ['z'] }] })).toThrow(
+        /Group g3 lists "z", which no shared-track line serves/,
+      );
+    });
   });
 });

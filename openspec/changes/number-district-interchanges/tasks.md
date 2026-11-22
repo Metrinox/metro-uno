@@ -4,7 +4,7 @@ The working tree holds an implementation of this change's earlier version (numbe
 
 ## 1. Data format and London data
 
-- [ ] 1.1 Replace the pair form of `sharedTrack`, `restartAt`, and numbered-interchange counting in `src/data/network.ts` with `sharedTrack: { lines, groups }`, `Station.group` and group numbering (design decision 1); keep `Station.number`. Verify with `network.test.ts` cases on a small test network:
+- [x] 1.1 Replace the pair form of `sharedTrack`, `restartAt`, and numbered-interchange counting in `src/data/network.ts` with `sharedTrack: { lines, groups }`, `Station.group` and group numbering (design decision 1); keep `Station.number`. Verify with `network.test.ts` cases on a small test network:
   - a station on two shared-track lines only is not an interchange;
   - a station also on another line is an unnumbered interchange;
   - group numbering skips interchanges and carries on through branches;

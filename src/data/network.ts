@@ -84,6 +84,31 @@ export interface WildThemes {
   draw4: WildTheme;
 }
 
+/** A route drawn like a line: a trunk plus branches. */
+export interface RouteDef {
+  trunk: string[];
+  branches?: BranchDef[];
+}
+
+/**
+ * A numbering group: stations on shared-track lines numbered together, in order,
+ * skipping interchanges, as a line is. Players never see the group itself.
+ */
+export interface NumberingGroupDef extends RouteDef {
+  id: string;
+}
+
+/**
+ * Lines that share track (e.g. London's Circle, H&C, Metropolitan and District).
+ * They count as one line when deciding interchanges, so a station served only by
+ * them is a plain station on several lines, numbered within its group.
+ */
+export interface SharedTrackDef {
+  /** The lines, in the order they are shown on cards and in line options. */
+  lines: string[];
+  groups: NumberingGroupDef[];
+}
+
 export interface NetworkDef {
   id: string;
   name: LocalizedName;
@@ -91,6 +116,8 @@ export interface NetworkDef {
   lines: LineDef[];
   transfers?: TransferDef[];
   wilds: WildThemes;
+  /** Lines that share track, with their numbering groups. */
+  sharedTrack?: SharedTrackDef;
 }
 
 export interface LineStop {
@@ -99,6 +126,7 @@ export interface LineStop {
   number: number | null;
   /** 0 for the trunk, 1.. for branches in definition order. */
   branch: number;
+  interchange: boolean;
 }
 
 export interface Line {
@@ -123,8 +151,12 @@ export interface Station {
   /** Codes of lines serving this station, in network line order. */
   lines: string[];
   interchange: boolean;
-  /** Number on each line it serves; null when interchange. */
+  /** Number on each line it serves (its group number on shared-track lines); null when interchange. */
   numbers: Record<string, number | null>;
+  /** The card's number, or null for an interchange. */
+  number: number | null;
+  /** The numbering group of a station on shared-track lines, else null. */
+  group: string | null;
   /** Walkway transfer: the station reached and the lines a played card may switch to. */
   transfer: { to: string; lines: string[] } | null;
 }
@@ -136,6 +168,10 @@ export interface Network {
   lines: Line[];
   lineByCode: Record<string, Line>;
   stations: Record<string, Station>;
+  /** Shared-track lines in card order; empty when the network has none. */
+  sharedLines: string[];
+  /** Numbering groups, in order, with their stations in numbering order. */
+  groups: { id: string; stationIds: string[] }[];
 }
 
 export class NetworkError extends Error {
@@ -143,6 +179,52 @@ export class NetworkError extends Error {
     super(message);
     this.name = 'NetworkError';
   }
+}
+
+
+interface Route {
+  segments: string[][];
+  branchFrom: (string | null)[];
+  branchTo: (string | null)[];
+  branchDraw: Required<BranchDraw>[];
+  /** Every station on the route, in order. */
+  ids: string[];
+}
+
+/** Validates a trunk-plus-branches route (`owner` names it in errors, e.g. "Line ISL"). */
+function buildRoute(owner: string, route: RouteDef, known: Record<string, LocalizedName>): Route {
+  if (route.trunk.length === 0) throw new NetworkError(`${owner} has no stations`);
+  const onRoute = new Set<string>();
+  const ids: string[] = [];
+  const segments: string[][] = [route.trunk, ...(route.branches ?? []).map((b) => b.stations)];
+  const branchFrom: (string | null)[] = [null];
+  const branchTo: (string | null)[] = [null];
+  const branchDraw: Required<BranchDraw>[] = [{ toward: 'right', side: 'above' }];
+
+  const add = (id: string) => {
+    if (!(id in known)) throw new NetworkError(`${owner} references unknown station "${id}"`);
+    if (onRoute.has(id)) throw new NetworkError(`${owner} lists station "${id}" twice`);
+    onRoute.add(id);
+    ids.push(id);
+  };
+
+  route.trunk.forEach(add);
+  for (const branch of route.branches ?? []) {
+    if (!onRoute.has(branch.from)) {
+      throw new NetworkError(`${owner} has a branch from "${branch.from}", which is not on that line before the branch`);
+    }
+    if (branch.stations.length === 0) throw new NetworkError(`${owner} has an empty branch from "${branch.from}"`);
+    branch.stations.forEach(add);
+    branchFrom.push(branch.from);
+    branchTo.push(branch.to ?? null);
+    branchDraw.push({ toward: branch.draw?.toward ?? 'right', side: branch.draw?.side ?? 'above' });
+  }
+  for (const b of route.branches ?? []) {
+    if (b.to === undefined) continue;
+    if (!onRoute.has(b.to)) throw new NetworkError(`${owner} has a branch rejoining at "${b.to}", which is not on that line`);
+    if (b.to === b.from) throw new NetworkError(`${owner} has a branch that rejoins where it starts ("${b.from}")`);
+  }
+  return { segments, branchFrom, branchTo, branchDraw, ids };
 }
 
 export function loadNetwork(def: NetworkDef): Network {
@@ -155,66 +237,70 @@ export function loadNetwork(def: NetworkDef): Network {
   const routes = def.lines.map((line) => {
     if (seenCodes.has(line.code)) throw new NetworkError(`Duplicate line code "${line.code}"`);
     seenCodes.add(line.code);
-    if (line.trunk.length === 0) throw new NetworkError(`Line ${line.code} has no stations`);
-
-    const onLine = new Set<string>();
-    const segments: string[][] = [line.trunk, ...(line.branches ?? []).map((b) => b.stations)];
-    const branchFrom: (string | null)[] = [null];
-    const branchTo: (string | null)[] = [null];
-    const branchDraw: Required<BranchDraw>[] = [{ toward: 'right', side: 'above' }];
-
-    const addStation = (id: string) => {
-      if (!(id in def.stations)) {
-        throw new NetworkError(`Line ${line.code} references unknown station "${id}"`);
-      }
-      if (onLine.has(id)) throw new NetworkError(`Line ${line.code} lists station "${id}" twice`);
-      onLine.add(id);
-      (membership[id] ??= []).push(line.code);
-    };
-
-    line.trunk.forEach(addStation);
-    for (const branch of line.branches ?? []) {
-      if (!onLine.has(branch.from)) {
-        throw new NetworkError(
-          `Line ${line.code} has a branch from "${branch.from}", which is not on that line before the branch`,
-        );
-      }
-      if (branch.stations.length === 0) {
-        throw new NetworkError(`Line ${line.code} has an empty branch from "${branch.from}"`);
-      }
-      branch.stations.forEach(addStation);
-      branchFrom.push(branch.from);
-      branchTo.push(branch.to ?? null);
-      branchDraw.push({ toward: branch.draw?.toward ?? 'right', side: branch.draw?.side ?? 'above' });
-    }
-    for (const to of branchTo) {
-      if (to === null) continue;
-      if (!onLine.has(to)) throw new NetworkError(`Line ${line.code} has a branch rejoining at "${to}", which is not on that line`);
-    }
-    (line.branches ?? []).forEach((b) => {
-      if (b.to === b.from) throw new NetworkError(`Line ${line.code} has a branch that rejoins where it starts ("${b.from}")`);
-    });
-    return { line, segments, branchFrom, branchTo, branchDraw };
+    const route = buildRoute(`Line ${line.code}`, line, def.stations);
+    for (const id of route.ids) (membership[id] ??= []).push(line.code);
+    return { line, route };
   });
 
-  const isInterchange = (id: string) => (membership[id]?.length ?? 0) >= 2;
+  // Shared-track lines count as one line when deciding interchanges.
+  const shared = def.sharedTrack;
+  const sharedLines = shared?.lines ?? [];
+  if (shared) {
+    for (const code of sharedLines) {
+      if (!seenCodes.has(code)) throw new NetworkError(`Shared-track line "${code}" is not a line in the network`);
+    }
+    if (new Set(sharedLines).size < 2) throw new NetworkError('Shared track needs at least two different lines');
+  }
+  const isShared = (code: string) => sharedLines.includes(code);
+  const isInterchange = (id: string) => {
+    const served = membership[id] ?? [];
+    const others = served.filter((l) => !isShared(l)).length;
+    return others + (served.some(isShared) ? 1 : 0) >= 2;
+  };
 
-  // Pass 2: number stops. Interchanges are skipped; the count runs on across branches.
-  const lines: Line[] = routes.map(({ line, segments, branchFrom, branchTo, branchDraw }) => {
+  // Numbering groups: every station on a shared-track line is in exactly one.
+  const groupOf: Record<string, string> = {};
+  const groupNumber: Record<string, number> = {};
+  const groups: { id: string; stationIds: string[] }[] = [];
+  for (const g of shared?.groups ?? []) {
+    const route = buildRoute(`Group ${g.id}`, g, def.stations);
+    let next = 1;
+    for (const id of route.ids) {
+      if (!(membership[id] ?? []).some(isShared)) {
+        throw new NetworkError(`Group ${g.id} lists "${id}", which no shared-track line serves`);
+      }
+      if (groupOf[id]) throw new NetworkError(`Station "${id}" is in groups ${groupOf[id]} and ${g.id}`);
+      groupOf[id] = g.id;
+      if (!isInterchange(id)) groupNumber[id] = next++;
+    }
+    groups.push({ id: g.id, stationIds: route.ids });
+  }
+  if (shared) {
+    for (const [id, served] of Object.entries(membership)) {
+      if (served.some(isShared) && !groupOf[id]) throw new NetworkError(`Station "${id}" is on a shared-track line but in no group`);
+    }
+  }
+
+  // Pass 2: number stops. Interchanges are skipped and the count runs on across
+  // branches; a station in a group takes its group number instead.
+  const lines: Line[] = routes.map(({ line, route }) => {
     let next = 1;
     const stops: LineStop[] = [];
-    segments.forEach((segment, branch) => {
+    route.segments.forEach((segment, branch) => {
       for (const stationId of segment) {
-        stops.push({ stationId, branch, number: isInterchange(stationId) ? null : next++ });
+        const interchange = isInterchange(stationId);
+        const number = interchange ? null : groupOf[stationId] ? groupNumber[stationId]! : next++;
+        stops.push({ stationId, branch, number, interchange });
       }
     });
     const labels = line.labels && line.labels.length > 0 ? line.labels : [{ code: line.code, colour: line.colour }];
-    const onLine = new Set(stops.map((s) => s.stationId));
+    const onLine = new Set(route.ids);
     for (const label of labels) {
       for (const id of label.stations ?? []) {
         if (!onLine.has(id)) throw new NetworkError(`Label ${label.code} on line ${line.code} covers "${id}", which is not on that line`);
       }
     }
+    const { branchFrom, branchTo, branchDraw } = route;
     return { code: line.code, name: line.name, colour: line.colour, labels, stops, branchFrom, branchTo, branchDraw };
   });
 
@@ -229,7 +315,9 @@ export function loadNetwork(def: NetworkDef): Network {
     for (const code of servedBy) {
       numbers[code] = lineByCode[code]!.stops.find((s) => s.stationId === id)!.number;
     }
-    stations[id] = { id, name, lines: servedBy, interchange: servedBy.length >= 2, numbers, transfer: null };
+    const interchange = isInterchange(id);
+    const number = interchange ? null : numbers[servedBy[0]!]!;
+    stations[id] = { id, name, lines: servedBy, interchange, numbers, number, group: groupOf[id] ?? null, transfer: null };
   }
 
   for (const { from, to } of def.transfers ?? []) {
@@ -244,5 +332,5 @@ export function loadNetwork(def: NetworkDef): Network {
     src.transfer = { to, lines };
   }
 
-  return { id: def.id, name: def.name, wilds: def.wilds, lines, lineByCode, stations };
+  return { id: def.id, name: def.name, wilds: def.wilds, lines, lineByCode, stations, sharedLines, groups };
 }
