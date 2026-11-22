@@ -1317,3 +1317,7 @@ button.card {
   flex-wrap: wrap;
   gap: 8px;
 }
+/* Runs within a group (the subsurface numbering groups) sit apart, unnamed. */
+.gallery-cards + .gallery-cards {
+  margin-top: 16px;
+}

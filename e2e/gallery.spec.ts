@@ -10,13 +10,18 @@ async function cardIds(page: Page) {
   return page.locator('.gallery-cards .card').evaluateAll((els) => els.map((e) => e.getAttribute('data-card')));
 }
 
-/** Checks that the London map is shown: 8 lines with diagrams and every card in its deck once. */
+/**
+ * Checks that the London map is shown: 10 lines with diagrams, every card in its deck
+ * once, and the subsurface stations in their own group.
+ */
 async function expectLondon(page: Page) {
   await expect(page.getByTestId('gallery-map-london-underground')).toBeChecked();
   const lines = page.getByTestId('gallery-line');
-  await expect(lines).toHaveCount(8);
-  await expect(lines.getByTestId('line-strip')).toHaveCount(8);
-  await expect(page.getByTestId('gallery-intro')).toHaveText(`All ${londonDeck.length} cards in the deck and all 8 lines.`);
+  await expect(lines).toHaveCount(10);
+  await expect(lines.getByTestId('line-strip')).toHaveCount(10);
+  await expect(page.getByTestId('gallery-intro')).toHaveText(`All ${londonDeck.length} cards in the deck and all 10 lines.`);
+  await expect(page.locator('[data-group="subsurface"] h3')).toHaveText(/^Subsurface lines/);
+  await expect(page.locator('[data-group="subsurface"] .card')).toHaveCount(56);
   const ids = await cardIds(page);
   expect(ids.toSorted()).toEqual(londonDeck.map((c) => c.id).toSorted());
   await expect(page.locator('[data-group="wilds"] .card')).toHaveCount(8);
@@ -97,9 +102,10 @@ test.describe('/gallery page', () => {
     await page.goto('/gallery/?map=london-underground');
     await page.getByTestId('lang-zh').click();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('卡牌及路綫一覽');
-    await expect(page.getByTestId('gallery-intro')).toHaveText(`牌堆全部 ${londonDeck.length} 張牌及全部 8 條路綫。`);
+    await expect(page.getByTestId('gallery-intro')).toHaveText(`牌堆全部 ${londonDeck.length} 張牌及全部 10 條路綫。`);
+    await expect(page.locator('[data-group="subsurface"] h3')).toHaveText(/^淺層綫/);
     const lines = page.getByTestId('gallery-line');
-    await expect(lines).toHaveCount(8);
+    await expect(lines).toHaveCount(10);
     // London has no Chinese names: each line shows its English name once, with no alternate-language copy.
     await expect(page.locator('.gallery-line-alt')).toHaveCount(0);
     await expect(lines.locator('.line-name')).toHaveText(london.lines.map((l) => l.name.en));
@@ -112,7 +118,7 @@ test.describe('/gallery page', () => {
     await page.setViewportSize({ width: 360, height: 740 });
     await page.goto('/gallery/?map=london-underground');
     await expect(page.getByTestId('gallery-map-menu')).toBeVisible();
-    await expect(page.getByTestId('gallery-line')).toHaveCount(8);
+    await expect(page.getByTestId('gallery-line')).toHaveCount(10);
     const m = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, w: innerWidth }));
     expect(m.sw).toBeLessThanOrEqual(m.w);
   });

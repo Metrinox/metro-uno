@@ -53,6 +53,8 @@ export interface Dict {
   stationCount: (n: number) => string;
   cardsHeading: string;
   interchangesGroup: string;
+  /** Gallery group of every card on the shared-track (subsurface) lines. */
+  subsurfaceGroup: string;
   wildsGroup: string;
   backToGame: string;
   defaultValue: (v: string) => string;
@@ -186,6 +188,7 @@ const en: Dict = {
   stationCount: (n) => `${n} stations`,
   cardsHeading: 'Cards',
   interchangesGroup: 'Interchanges',
+  subsurfaceGroup: 'Subsurface lines',
   wildsGroup: 'Wild cards',
   backToGame: '← Back to the game',
   defaultValue: (v) => `Default: ${v}`,
@@ -338,6 +341,7 @@ const zh: Dict = {
   stationCount: (n) => `${n} 個站`,
   cardsHeading: '卡牌',
   interchangesGroup: '轉車站',
+  subsurfaceGroup: '淺層綫',
   wildsGroup: '萬用牌',
   backToGame: '← 返回遊戲',
   defaultValue: (v) => `預設：${v}`,

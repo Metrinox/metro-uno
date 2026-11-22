@@ -85,7 +85,7 @@ The working tree holds an implementation of this change's earlier version (numbe
   - King's Cross from the Northern offers three choices, the first showing CIR, H&C and MET;
   - Victoria from the Victoria line plays with no prompt;
   - North Point still changes line with no prompt.
-- [ ] 3.5 Add the "Subsurface lines" (淺層綫) card group to `GalleryPage.tsx`, keeping action cards in their lines' groups (design decision 5). Verify with `GalleryPage.test.tsx`:
+- [x] 3.5 Add the "Subsurface lines" (淺層綫) card group to `GalleryPage.tsx`, keeping action cards in their lines' groups (design decision 5). Verify with `GalleryPage.test.tsx`:
   - London shows 10 lines and 174 cards, each card once;
   - the Subsurface group runs Hammersmith (H&C) to Kensington (Olympia), with no group names;
   - the CIR, DIS, H&C and MET groups each hold only their three action cards;
