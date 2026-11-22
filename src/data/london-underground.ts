@@ -17,10 +17,12 @@ import type { NetworkDef } from './network';
  *   trains), so those are District-only. Metropolitan trains in Zones 1–2 stop
  *   at Aldgate … Baker Street and Finchley Road only.
  * - Waterloo & City is left out (both its stations are interchanges anyway).
- * - Circle, Hammersmith & City and Metropolitan are merged into one line, code
- *   SSR, labelled CIR · H&C · MET (game decision, like Hong Kong's TCL · DRL · AEL).
- *   Its main route is the H&C; the Circle's southern half is a loop from
- *   Liverpool Street rejoining at Paddington; the Met is a spur from Baker Street.
+ * - The subsurface lines (Circle, Hammersmith & City, Metropolitan, District)
+ *   share track: a station served only by them is not an interchange (game
+ *   decision). Their stations are numbered in five groups by which subsurface
+ *   lines serve them; see `sharedTrack`.
+ * - The Circle's main route is Hammersmith → Liverpool Street; its southern half
+ *   is a loop from Liverpool Street rejoining at Paddington.
  * - Kensington (Olympia) is kept as a District spur (game decision) although its
  *   District service is part-time.
  * - The two Hammersmiths and the two Edgware Roads are separate stations, as TfL
@@ -30,7 +32,8 @@ import type { NetworkDef } from './network';
  *   South (the Morden branch carries straight on); the Bank branch is a loop
  *   from Euston (where the two branches first meet going south from Camden
  *   Town) rejoining at Kennington.
- * - Each line is numbered from its north or west end within Zones 1–2.
+ * - Each line, and each subsurface group, is numbered from its north or west end
+ *   within Zones 1–2.
  * - Colours: TfL colour standards. No Chinese names (game decision).
  */
 export const londonUnderground: NetworkDef = {
@@ -214,6 +217,31 @@ export const londonUnderground: NetworkDef = {
       ],
     },
     {
+      code: 'CIR',
+      name: { en: 'Circle' },
+      colour: '#FFD300',
+      // Main route Hammersmith → Liverpool Street; the southern half is a loop
+      // rejoining at Paddington, drawn below the trunk heading back west.
+      trunk: [
+        'hammersmith-hc', 'goldhawk-road', 'shepherds-bush-market', 'wood-lane', 'latimer-road', 'ladbroke-grove',
+        'westbourne-park', 'royal-oak', 'paddington', 'edgware-road-circle', 'baker-street',
+        'great-portland-street', 'euston-square', 'kings-cross-st-pancras', 'farringdon', 'barbican', 'moorgate',
+        'liverpool-street',
+      ],
+      branches: [
+        {
+          from: 'liverpool-street',
+          to: 'paddington',
+          stations: [
+            'aldgate', 'tower-hill', 'monument', 'cannon-street', 'mansion-house', 'blackfriars', 'temple',
+            'embankment', 'westminster', 'st-jamess-park', 'victoria', 'sloane-square', 'south-kensington',
+            'gloucester-road', 'high-street-kensington', 'notting-hill-gate', 'bayswater',
+          ],
+          draw: { toward: 'left', side: 'below' },
+        },
+      ],
+    },
+    {
       code: 'DIS',
       name: { en: 'District' },
       colour: '#00782A',
@@ -240,6 +268,18 @@ export const londonUnderground: NetworkDef = {
       ],
     },
     {
+      code: 'H&C',
+      name: { en: 'Hammersmith & City' },
+      colour: '#F3A9BB',
+      trunk: [
+        'hammersmith-hc', 'goldhawk-road', 'shepherds-bush-market', 'wood-lane', 'latimer-road', 'ladbroke-grove',
+        'westbourne-park', 'royal-oak', 'paddington', 'edgware-road-circle', 'baker-street',
+        'great-portland-street', 'euston-square', 'kings-cross-st-pancras', 'farringdon', 'barbican', 'moorgate',
+        'liverpool-street', 'aldgate-east', 'whitechapel', 'stepney-green', 'mile-end', 'bow-road',
+        'bromley-by-bow', 'west-ham',
+      ],
+    },
+    {
       code: 'JUB',
       name: { en: 'Jubilee' },
       colour: '#A0A5A9',
@@ -247,6 +287,16 @@ export const londonUnderground: NetworkDef = {
         'willesden-green', 'kilburn', 'west-hampstead', 'finchley-road', 'swiss-cottage', 'st-johns-wood',
         'baker-street', 'bond-street', 'green-park', 'westminster', 'waterloo', 'southwark', 'london-bridge',
         'bermondsey', 'canada-water', 'canary-wharf', 'north-greenwich', 'canning-town', 'west-ham', 'stratford',
+      ],
+    },
+    {
+      code: 'MET',
+      name: { en: 'Metropolitan' },
+      colour: '#9B0056',
+      // Metropolitan trains run non-stop from Finchley Road to Baker Street.
+      trunk: [
+        'finchley-road', 'baker-street', 'great-portland-street', 'euston-square', 'kings-cross-st-pancras',
+        'farringdon', 'barbican', 'moorgate', 'liverpool-street', 'aldgate',
       ],
     },
     {
@@ -296,69 +346,51 @@ export const londonUnderground: NetworkDef = {
         'oxford-circus', 'green-park', 'victoria', 'pimlico', 'vauxhall', 'stockwell', 'brixton',
       ],
     },
-    {
-      code: 'SSR',
-      name: { en: 'Circle, Hammersmith & City and Metropolitan' },
-      colour: '#FFD300',
-      // Coverage drives the line strip. MET runs through St John's Wood etc. without stopping,
-      // and H&C passes Aldgate by (it leaves the Circle at Liverpool Street for Aldgate East).
-      labels: [
-        {
-          code: 'CIR',
-          colour: '#FFD300',
-          stations: [
-            'hammersmith-hc', 'goldhawk-road', 'shepherds-bush-market', 'wood-lane', 'latimer-road', 'ladbroke-grove',
-            'westbourne-park', 'royal-oak', 'paddington', 'edgware-road-circle', 'baker-street',
-            'great-portland-street', 'euston-square', 'kings-cross-st-pancras', 'farringdon', 'barbican', 'moorgate',
-            'liverpool-street', 'aldgate', 'tower-hill', 'monument', 'cannon-street', 'mansion-house', 'blackfriars',
-            'temple', 'embankment', 'westminster', 'st-jamess-park', 'victoria', 'sloane-square', 'south-kensington',
-            'gloucester-road', 'high-street-kensington', 'notting-hill-gate', 'bayswater',
-          ],
-        },
-        {
-          code: 'H&C',
-          colour: '#F3A9BB',
-          stations: [
-            'hammersmith-hc', 'goldhawk-road', 'shepherds-bush-market', 'wood-lane', 'latimer-road', 'ladbroke-grove',
-            'westbourne-park', 'royal-oak', 'paddington', 'edgware-road-circle', 'baker-street',
-            'great-portland-street', 'euston-square', 'kings-cross-st-pancras', 'farringdon', 'barbican', 'moorgate',
-            'liverpool-street', 'aldgate-east', 'whitechapel', 'stepney-green', 'mile-end', 'bow-road',
-            'bromley-by-bow', 'west-ham',
-          ],
-        },
-        {
-          code: 'MET',
-          colour: '#9B0056',
-          stations: [
-            'aldgate', 'liverpool-street', 'moorgate', 'barbican', 'farringdon', 'kings-cross-st-pancras',
-            'euston-square', 'great-portland-street', 'baker-street', 'finchley-road',
-          ],
-        },
-      ],
-      trunk: [
-        'hammersmith-hc', 'goldhawk-road', 'shepherds-bush-market', 'wood-lane', 'latimer-road', 'ladbroke-grove',
-        'westbourne-park', 'royal-oak', 'paddington', 'edgware-road-circle', 'baker-street', 'great-portland-street',
-        'euston-square', 'kings-cross-st-pancras', 'farringdon', 'barbican', 'moorgate', 'liverpool-street',
-        'aldgate-east', 'whitechapel', 'stepney-green', 'mile-end', 'bow-road', 'bromley-by-bow', 'west-ham',
-      ],
-      branches: [
-        // Metropolitan, non-stop from Baker Street to Finchley Road.
-        // Metropolitan to Finchley Road, drawn heading north-west (left) as on the map.
-        { from: 'baker-street', stations: ['finchley-road'], draw: { toward: 'left' } },
-        // Circle's southern half: a loop from Liverpool Street rejoining at Paddington.
-        {
-          from: 'liverpool-street',
-          to: 'paddington',
-          stations: [
-            'aldgate', 'tower-hill', 'monument', 'cannon-street', 'mansion-house', 'blackfriars', 'temple',
-            'embankment', 'westminster', 'st-jamess-park', 'victoria', 'sloane-square', 'south-kensington',
-            'gloucester-road', 'high-street-kensington', 'notting-hill-gate', 'bayswater',
-          ],
-          // Drawn as on the map: the Circle's southern side runs below the trunk,
-          // heading back west (left) to Paddington, closing the ring.
-          draw: { toward: 'left', side: 'below' },
-        },
-      ],
-    },
   ],
+  // The subsurface lines share track. A station served only by them is a plain station
+  // on all its lines, numbered in its group; groups are numbered from the west or north.
+  sharedTrack: {
+    lines: ['CIR', 'H&C', 'MET', 'DIS'],
+    groups: [
+      // Circle and H&C (Paddington and Edgware Road also have the District).
+      {
+        id: 'cir-hc',
+        trunk: [
+          'hammersmith-hc', 'goldhawk-road', 'shepherds-bush-market', 'wood-lane', 'latimer-road', 'ladbroke-grove',
+          'westbourne-park', 'royal-oak', 'paddington', 'edgware-road-circle',
+        ],
+      },
+      // The Metropolitan, with any of the Circle and H&C.
+      {
+        id: 'met',
+        trunk: [
+          'finchley-road', 'baker-street', 'great-portland-street', 'euston-square', 'kings-cross-st-pancras',
+          'farringdon', 'barbican', 'moorgate', 'liverpool-street', 'aldgate',
+        ],
+      },
+      // H&C and District.
+      {
+        id: 'hc-dis',
+        trunk: ['aldgate-east', 'whitechapel', 'stepney-green', 'mile-end', 'bow-road', 'bromley-by-bow', 'west-ham'],
+      },
+      // Circle and District.
+      {
+        id: 'cir-dis',
+        trunk: [
+          'bayswater', 'notting-hill-gate', 'high-street-kensington', 'gloucester-road', 'south-kensington',
+          'sloane-square', 'victoria', 'st-jamess-park', 'westminster', 'embankment', 'temple', 'blackfriars',
+          'mansion-house', 'cannon-street', 'monument', 'tower-hill',
+        ],
+      },
+      // District only.
+      {
+        id: 'dis',
+        trunk: [
+          'turnham-green', 'stamford-brook', 'ravenscourt-park', 'hammersmith-dp', 'barons-court', 'west-kensington',
+          'earls-court', 'west-brompton', 'fulham-broadway', 'parsons-green', 'putney-bridge', 'east-putney',
+        ],
+        branches: [{ from: 'earls-court', stations: ['kensington-olympia'] }],
+      },
+    ],
+  },
 };

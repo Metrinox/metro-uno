@@ -13,7 +13,7 @@ The working tree holds an implementation of this change's earlier version (numbe
   - loading fails for a station in no group or in two, and for a group station no shared-track line serves.
 
   Remove the earlier pair and restart cases.
-- [ ] 1.2 Replace `SSR` with `CIR`, `H&C` and `MET` in `src/data/london-underground.ts`, declare `sharedTrack` with the five groups, and repoint the Hammersmith and Bank transfers (design decision 2); update the file's header comment. Verify with `london-underground.test.ts` cases for every changed transit-network-data scenario:
+- [x] 1.2 Replace `SSR` with `CIR`, `H&C` and `MET` in `src/data/london-underground.ts`, declare `sharedTrack` with the five groups, and repoint the Hammersmith and Bank transfers (design decision 2); update the file's header comment. Verify with `london-underground.test.ts` cases for every changed transit-network-data scenario:
   - 10 lines;
   - each subsurface station in the group the table gives (Paddington and Edgware Road in group 1);
   - the group numbers in the "Group numbers" scenario;

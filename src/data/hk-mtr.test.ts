@@ -80,6 +80,13 @@ describe('Hong Kong MTR heavy rail data', () => {
     }
   });
 
+  it('has no shared-track lines or groups', () => {
+    expect([hk.sharedLines, hk.groups]).toEqual([[], []]);
+    expect(Object.values(hk.stations).filter((s) => s.interchange && s.number !== null)).toEqual([]);
+    // North Point (Island + Tseung Kwan O) is still an interchange.
+    expect(hk.stations['north-point']).toMatchObject({ interchange: true, number: null });
+  });
+
   it('makes Admiralty a four-line interchange', () => {
     expect([...hk.stations.admiralty!.lines].sort()).toEqual(['EAL', 'ISL', 'SIL', 'TWL']);
     expect(hk.stations.admiralty!.interchange).toBe(true);
