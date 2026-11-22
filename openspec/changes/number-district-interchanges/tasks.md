@@ -45,7 +45,16 @@ The working tree holds an implementation of this change's earlier version (numbe
 - [x] 2.6 Convert or end stored rounds on load (design decision 6, `server/room.ts`/`roomObject.ts`), in its own commit. Verify with room tests:
   - a stored Hong Kong round with `currentLine` loads with `currentLines` and plays on;
   - a stored London round with an `SSR` card loads into the lobby with its players.
-- [ ] 2.7 Update the London expectations in `simulate.test.ts` and run it. Verify that London rounds still finish within the limits. Record turns per round, share of plays by number, share of turns with no number face, and action-card share, against main's figures (354 turns, 12%, 38%).
+- [x] 2.7 Update the London expectations in `simulate.test.ts` and run it. Verify that London rounds still finish within the limits. Record turns per round, share of plays by number, share of turns with no number face, and action-card share, against main's figures (354 turns, 12%, 38%).
+  - Results (2026-11-22; 1,000 four-player rounds, default rules, seeds 0–999, same measure for both). `simulate.test.ts` needed no new London expectations: every London rule set passes its limits.
+
+    | | Turns per round | Turns with no number face | Plays matched by number only | Action cards |
+    |---|---|---|---|---|
+    | London, main | 351 | 52.6% | 8.0% | 24 of 168 (14.3%) |
+    | London, this change | 334 | 48.1% | 9.2% | 30 of 174 (17.2%) |
+    | Hong Kong (both) | 359 | 42.2% | 10.8% | 24 of 130 (18.5%) |
+
+    The proposal's main figures (354 turns, 12%, 38%) came from an earlier prototype with a different measure, so compare within this table.
 
 ## 3. Display
 
