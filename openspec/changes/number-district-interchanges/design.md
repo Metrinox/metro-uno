@@ -62,7 +62,7 @@ Validation fails in any of these cases:
 
 ### 2. London data
 - `SSR` is replaced by three single-label lines in TfL's colours:
-  - `CIR` (#FFD300): the trunk runs Hammersmith (H&C) → Liverpool Street, and the southern half is the loop branch back to Paddington, as it is drawn today;
+  - `CIR` (#FFD300): the trunk runs Hammersmith (H&C) → Aldgate, so Aldgate is level with Liverpool Street, and the southern half is the loop branch from Aldgate back to Paddington;
   - `H&C` (#F3A9BB): Hammersmith (H&C) → West Ham;
   - `MET` (#9B0056): Finchley Road → Aldgate, numbered from its north end.
 - Line order follows TfL's alphabetical list: BAK, CEN, CIR, DIS, H&C, JUB, MET, NOR, PIC, VIC.

@@ -158,7 +158,7 @@ Cards, line badges, line strips, and event messages SHALL use the network the ro
 
 #### Scenario: London line strip
 - **WHEN** the current line is the Circle alone in a London round
-- **THEN** the line strip shows only Circle stations, with its southern loop drawn between Liverpool Street and Paddington, and no Finchley Road or Whitechapel
+- **THEN** the line strip shows only Circle stations, with Aldgate level with Liverpool Street, its southern loop drawn between Aldgate and Paddington, and no Finchley Road or Whitechapel
 
 #### Scenario: Metropolitan line strip
 - **WHEN** the current line is the Metropolitan alone in a London round

@@ -103,15 +103,18 @@ describe('line strip layout', () => {
     const strip = (code: string) => layoutLine(lu.lineByCode[code]!);
     const posIn = (l: ReturnType<typeof strip>) => (id: string) => l.stops.find((s) => s.stationId === id)!;
 
-    it('draws the Circle as a ring under the trunk between Paddington and Liverpool Street', () => {
+    it('draws the Circle as a ring under the trunk between Paddington and Aldgate', () => {
       const cir = strip('CIR');
       const pos = posIn(cir);
-      const [pad, lst] = [pos('paddington'), pos('liverpool-street')];
-      // The loop runs below the trunk from just left of Liverpool Street to just right of Paddington…
-      expect(pos('aldgate')).toMatchObject({ row: 1, col: lst.col - 1 });
+      const [pad, ald] = [pos('paddington'), pos('aldgate')];
+      // Aldgate is level with Liverpool Street, at the end of the trunk.
+      expect([pos('liverpool-street').row, ald.row]).toEqual([0, 0]);
+      expect(ald.col).toBeGreaterThan(pos('liverpool-street').col);
+      // The loop runs below the trunk from just left of Aldgate to just right of Paddington…
+      expect(pos('tower-hill')).toMatchObject({ row: 1, col: ald.col - 1 });
       expect(pos('bayswater')).toMatchObject({ row: 1, col: pad.col + 1 });
       // …so the trunk between them is spread out to fit it, and nothing shares a cell.
-      expect(lst.col - pad.col).toBe(18);
+      expect(ald.col - pad.col).toBe(17);
       expect(new Set(cir.stops.map((s) => `${s.col},${s.row}`)).size).toBe(cir.stops.length);
       expect(pos('royal-oak').col + 1).toBe(pad.col);
       // Only Circle stations.

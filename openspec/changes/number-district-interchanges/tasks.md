@@ -97,6 +97,7 @@ The working tree holds an implementation of this change's earlier version (numbe
   - the table with two and three current lines.
 
   Verify by screenshots showing no overlap, no sideways page scrolling, and the whole table visible without scrolling at 360×640.
+- [x] 3.7 Draw Aldgate level with Liverpool Street on the Circle's strip, with the southern loop leaving from Aldgate. Verify with the Circle cases in `london-underground.test.ts` and `lineLayout.test.ts`.
 
 ## 4. Final checks
 

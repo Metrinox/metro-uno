@@ -21,8 +21,8 @@ import type { NetworkDef } from './network';
  *   share track: a station served only by them is not an interchange (game
  *   decision). Their stations are numbered in five groups by which subsurface
  *   lines serve them; see `sharedTrack`.
- * - The Circle's main route is Hammersmith → Liverpool Street; its southern half
- *   is a loop from Liverpool Street rejoining at Paddington.
+ * - The Circle's main route is Hammersmith → Aldgate; its southern half is a loop
+ *   from Aldgate rejoining at Paddington.
  * - Kensington (Olympia) is kept as a District spur (game decision) although its
  *   District service is part-time.
  * - The two Hammersmiths and the two Edgware Roads are separate stations, as TfL
@@ -220,22 +220,22 @@ export const londonUnderground: NetworkDef = {
       code: 'CIR',
       name: { en: 'Circle' },
       colour: '#FFD300',
-      // Main route Hammersmith → Liverpool Street; the southern half is a loop
+      // Main route Hammersmith → Aldgate; the southern half is a loop
       // rejoining at Paddington, drawn below the trunk heading back west.
       trunk: [
         'hammersmith-hc', 'goldhawk-road', 'shepherds-bush-market', 'wood-lane', 'latimer-road', 'ladbroke-grove',
         'westbourne-park', 'royal-oak', 'paddington', 'edgware-road-circle', 'baker-street',
         'great-portland-street', 'euston-square', 'kings-cross-st-pancras', 'farringdon', 'barbican', 'moorgate',
-        'liverpool-street',
+        'liverpool-street', 'aldgate',
       ],
       branches: [
         {
-          from: 'liverpool-street',
+          from: 'aldgate',
           to: 'paddington',
           stations: [
-            'aldgate', 'tower-hill', 'monument', 'cannon-street', 'mansion-house', 'blackfriars', 'temple',
-            'embankment', 'westminster', 'st-jamess-park', 'victoria', 'sloane-square', 'south-kensington',
-            'gloucester-road', 'high-street-kensington', 'notting-hill-gate', 'bayswater',
+            'tower-hill', 'monument', 'cannon-street', 'mansion-house', 'blackfriars', 'temple', 'embankment',
+            'westminster', 'st-jamess-park', 'victoria', 'sloane-square', 'south-kensington', 'gloucester-road',
+            'high-street-kensington', 'notting-hill-gate', 'bayswater',
           ],
           draw: { toward: 'left', side: 'below' },
         },

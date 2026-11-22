@@ -52,10 +52,10 @@ describe('London Underground Zones 1–2 data', () => {
     expect(num('DIS', 'turnham-green')).toBe(1);
   });
 
-  it('makes the Circle south loop leave Liverpool Street and rejoin at Paddington', () => {
+  it('makes the Circle south loop leave Aldgate and rejoin at Paddington', () => {
     const cir = lu.lineByCode.CIR!;
-    const b = cir.stops.find((s) => s.stationId === 'aldgate')!.branch;
-    expect(cir.branchFrom[b]).toBe('liverpool-street');
+    const b = cir.stops.find((s) => s.stationId === 'tower-hill')!.branch;
+    expect(cir.branchFrom[b]).toBe('aldgate');
     expect(cir.branchTo[b]).toBe('paddington');
   });
 
