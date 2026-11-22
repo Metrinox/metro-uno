@@ -6,7 +6,7 @@
  * plain JSON so a future server can store and send it.
  */
 import type { Network } from '../data/network';
-import { buildDeck, type ActionType, type Card } from './cards';
+import { buildDeck, cardLines, type ActionType, type Card } from './cards';
 import { seedFrom, shuffle, type RngState } from './rng';
 
 export const MIN_PLAYERS = 2;
@@ -167,7 +167,7 @@ function onCurrent(lines: readonly string[], currentLines: readonly string[]): b
 export function isPlayable(card: Card, currentLines: readonly string[], face: Face): boolean {
   switch (card.kind) {
     case 'station':
-      return currentLines.includes(card.line) || (face.kind === 'number' && face.n === card.number);
+      return onCurrent(cardLines(card), currentLines) || (face.kind === 'number' && face.n === card.number);
     case 'interchange':
       return onCurrent(card.lines, currentLines);
     case 'action':
@@ -216,6 +216,12 @@ export interface LineContext {
   currentLines: readonly string[];
 }
 
+/** Groups lines into options: the shared-track ones together as one option, then each other line on its own. */
+export function lineOptions(lines: readonly string[], sharedLines: readonly string[]): string[][] {
+  const shared = sharedLines.filter((l) => lines.includes(l));
+  return [...(shared.length > 0 ? [shared] : []), ...lines.filter((l) => !sharedLines.includes(l)).map((l) => [l])];
+}
+
 /** Whether two options name the same lines. */
 export function sameLines(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((l) => b.includes(l));
@@ -223,22 +229,26 @@ export function sameLines(a: readonly string[], b: readonly string[]): boolean {
 
 /**
  * The options `card` may change line to, or null for cards that set their own
- * line. Each option is a list of lines that become current together.
- * - An interchange must change line, so options on the current lines are left
- *   out; a two-line interchange therefore has exactly one choice.
+ * lines (a station sets its line or lines, an action card its line). Each option
+ * is one line, or several shared-track lines that become current together.
+ * - An interchange must change line: options that share a line with the current
+ *   lines are left out, so a two-option interchange needs no choice.
  * - A transfer station switches to its transfer lines; an interchange with a
  *   transfer offers them too.
  * - Wilds may pick any single line.
  */
 export function lineChoices(card: Card, ctx: LineContext): string[][] | null {
-  const single = (lines: readonly string[]) => lines.map((l) => [l]);
+  const transfer = 'transferLines' in card && card.transferLines ? lineOptions(card.transferLines, ctx.sharedLines) : [];
   switch (card.kind) {
-    case 'interchange':
-      return single([...card.lines, ...(card.transferLines ?? [])].filter((l) => !ctx.currentLines.includes(l)));
+    case 'interchange': {
+      const all = [...lineOptions(card.lines, ctx.sharedLines), ...transfer];
+      const unique = all.filter((o, i) => all.findIndex((p) => sameLines(o, p)) === i);
+      return unique.filter((o) => !onCurrent(o, ctx.currentLines));
+    }
     case 'station':
-      return card.transferLines ? single(card.transferLines) : null;
+      return card.transferLines ? transfer : null;
     case 'wild':
-      return single(ctx.lines);
+      return ctx.lines.map((l) => [l]);
     case 'action':
       return null;
   }
@@ -279,11 +289,12 @@ export function createGame({ network, players, seed, rules: partialRules }: NewG
   // Turn cards until a single-line station card appears; shuffle the rest back.
   const turnedOver: Card[] = [];
   let start: Card | undefined;
+  const singleLine = (c: Card | undefined): c is Extract<Card, { kind: 'station' }> => c?.kind === 'station' && !c.lines;
   while ((start = pile.shift())) {
-    if (start.kind === 'station') break;
+    if (singleLine(start)) break;
     turnedOver.push(start);
   }
-  if (!start || start.kind !== 'station') throw new Error('Deck has no single-line station card to start with');
+  if (!singleLine(start)) throw new Error('Deck has no single-line station card to start with');
   if (turnedOver.length > 0) [pile, rng] = shuffle([...pile, ...turnedOver], rng);
 
   return {
@@ -385,8 +396,9 @@ function play(state: GameState, idx: number, action: Extract<Action, { type: 'pl
   const prevLines = s.currentLines;
   switch (last.kind) {
     case 'station':
-      // A transfer station switches to the chosen transfer line; the number stays.
-      s.currentLines = newLines ?? [last.line];
+      // A multi-line station makes all its lines current; a transfer station switches
+      // to the chosen transfer option. The number stays.
+      s.currentLines = newLines ?? cardLines(last);
       s.face = { kind: 'number', n: last.number };
       break;
     case 'action':

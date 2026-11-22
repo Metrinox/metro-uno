@@ -33,7 +33,7 @@ The working tree holds an implementation of this change's earlier version (numbe
   - London has 174 cards: 34 interchange, 29 multi-line, 73 single-line;
   - Hong Kong still has 130.
 - [x] 2.2 Replace `currentLine` with `currentLines`, `chosenLine` with `chosenLines`, and make `lineChoices` return options of several lines in `src/engine/game.ts` and `src/shared/protocol.ts` (design decision 4); update `test-helpers.ts`. Verify that every existing Hong Kong `game.test.ts` case passes, rewritten only for the new field names.
-- [ ] 2.3 Implement the multi-line station, interchange, transfer and line action rules (design decision 4), and remove the numbered-interchange rules and their tests. Verify with a `game.test.ts` case for each scenario in:
+- [x] 2.3 Implement the multi-line station, interchange, transfer and line action rules (design decision 4), and remove the numbered-interchange rules and their tests. Verify with a `game.test.ts` case for each scenario in:
   - "Multi-line station plays";
   - "Current line and face";
   - "Legal station plays";

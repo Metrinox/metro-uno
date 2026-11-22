@@ -1,5 +1,5 @@
 import { applyAction, createGame, isPlayable, lineChoices, normalizeRules, viewFor, type Action, type GameState } from './game';
-import { card, hk, scenario } from './test-helpers';
+import { card, hk, lu, scenario } from './test-helpers';
 
 const ok = (s: GameState, player: string, action: Action) => {
   const r = applyAction(s, player, action);
@@ -535,6 +535,117 @@ describe('draw stacking', () => {
     expect(r.state.players[0]!.hand).toHaveLength(8);
     expect(r.state.pendingDraw).toBeNull();
     expect(r.state.turn).toBe(1);
+  });
+});
+
+describe('shared-track lines (London)', () => {
+  // A single-line London station card numbered `n` on `line`, for tops and fillers.
+  const stationId = (line: string, n: number) =>
+    `st:${Object.values(lu.stations).find((s) => !s.interchange && s.lines.length === 1 && s.lines[0] === line && s.number === n)!.id}`;
+  const luFiller = ['st:angel', 'st:borough', 'st:oval'];
+  const london = (hand: string[], o: Partial<Parameters<typeof scenario>[0]> = {}) =>
+    scenario({ network: lu, hands: [[...hand, ...luFiller], luFiller], ...o });
+  const n = (k: number) => ({ kind: 'number', n: k }) as const;
+  const play = (s: GameState, cardId: string, more: Partial<Extract<Action, { type: 'play' }>> = {}) =>
+    applyAction(s, 'p0', { type: 'play', cardId, ...more });
+
+  describe('multi-line station plays', () => {
+    it('makes all its lines current with no choice, and its number the face', () => {
+      const s = london(['st:sloane-square'], { top: 'st:st-jamess-park', currentLines: ['CIR'], face: n(4) });
+      const r = ok(s, 'p0', { type: 'play', cardId: 'st:sloane-square' });
+      expect(r.state.currentLines).toEqual(['CIR', 'DIS']);
+      expect(r.state.face).toEqual(n(3));
+      expect(r.events).toContainEqual({ type: 'lineChanged', player: 'p0', lines: ['CIR', 'DIS'] });
+    });
+
+    it('can be played by number from another line', () => {
+      const s = london(['st:sloane-square'], { top: stationId('BAK', 3) });
+      expect([s.currentLines, s.face]).toEqual([['BAK'], n(3)]);
+      const r = ok(s, 'p0', { type: 'play', cardId: 'st:sloane-square' });
+      expect([r.state.currentLines, r.state.face]).toEqual([['CIR', 'DIS'], n(3)]);
+    });
+
+    it('lets the next player play on either line, or the same number', () => {
+      const ctx = { currentLines: ['CIR', 'DIS'], face: n(3) };
+      for (const id of ['st:goldhawk-road', 'st:parsons-green', 'st:whitechapel']) {
+        expect(isPlayable(card(id, lu), ctx.currentLines, ctx.face), id).toBe(true);
+      }
+      expect(isPlayable(card(stationId('BAK', 3), lu), ctx.currentLines, ctx.face)).toBe(true);
+      expect(isPlayable(card(stationId('BAK', 4), lu), ctx.currentLines, ctx.face)).toBe(false);
+    });
+
+    it('is not playable off its lines with a different number', () => {
+      const s = london(['st:sloane-square'], { top: 'st:whitechapel', currentLines: ['H&C'], face: n(7) });
+      expect(play(s, 'st:sloane-square')).toEqual({ ok: false, reason: 'not-playable' });
+    });
+
+    it('sets several lines current (Goldhawk Road: Circle and H&C, face 2)', () => {
+      const s = london(['st:goldhawk-road'], { top: 'st:royal-oak' });
+      expect(s.currentLines).toEqual(['CIR', 'H&C']);
+      const r = ok(s, 'p0', { type: 'play', cardId: 'st:goldhawk-road' });
+      expect([r.state.currentLines, r.state.face]).toEqual([['CIR', 'H&C'], n(2)]);
+      expect(r.events.some((e) => e.type === 'lineChanged')).toBe(false);
+    });
+  });
+
+  it('plays a single-line card on one of several current lines, leaving only its line', () => {
+    const s = london(['st:parsons-green'], { top: 'st:sloane-square' });
+    const r = ok(s, 'p0', { type: 'play', cardId: 'st:parsons-green' });
+    expect(r.state.currentLines).toEqual(['DIS']);
+  });
+
+  it('plays a line action on one of several current lines, leaving only its line', () => {
+    const s = london(['act:signal-fault:DIS'], { top: 'st:sloane-square' });
+    const r = ok(s, 'p0', { type: 'play', cardId: 'act:signal-fault:DIS' });
+    expect(r.state.currentLines).toEqual(['DIS']);
+  });
+
+  describe('interchange plays', () => {
+    it('switches to the shared-track lines together (Victoria from the Victoria line)', () => {
+      const s = london(['st:victoria'], { top: 'st:pimlico' });
+      expect(s.currentLines).toEqual(['VIC']);
+      const r = ok(s, 'p0', { type: 'play', cardId: 'st:victoria' });
+      expect([r.state.currentLines, r.state.face]).toEqual([['CIR', 'DIS'], { kind: 'none' }]);
+    });
+
+    it('leaves the shared-track lines for its other line (Victoria from Circle and District)', () => {
+      const r = ok(london(['st:victoria'], { top: 'st:sloane-square' }), 'p0', { type: 'play', cardId: 'st:victoria' });
+      expect(r.state.currentLines).toEqual(['VIC']);
+    });
+
+    it('never splits the shared-track lines (King\'s Cross from the Northern)', () => {
+      const s = london(['st:kings-cross-st-pancras'], { top: 'st:angel' });
+      expect(lineChoices(card('st:kings-cross-st-pancras', lu), s)).toEqual([['CIR', 'H&C', 'MET'], ['PIC'], ['VIC']]);
+      expect(play(s, 'st:kings-cross-st-pancras')).toEqual({ ok: false, reason: 'line-choice-required' });
+      expect(play(s, 'st:kings-cross-st-pancras', { chosenLines: ['CIR'] })).toEqual({ ok: false, reason: 'invalid-line' });
+      // The option matches as a set, in any order.
+      const r = ok(s, 'p0', { type: 'play', cardId: 'st:kings-cross-st-pancras', chosenLines: ['MET', 'CIR', 'H&C'] });
+      expect(r.state.currentLines).toEqual(['CIR', 'H&C', 'MET']);
+    });
+  });
+
+  describe('transfer plays', () => {
+    it('switches a multi-line transfer station to a transfer line (Monument)', () => {
+      const s = london(['st:monument'], { top: 'st:parsons-green' });
+      expect(lineChoices(card('st:monument', lu), s)).toEqual([['CEN'], ['NOR']]);
+      const r = ok(s, 'p0', { type: 'play', cardId: 'st:monument', chosenLines: ['CEN'] });
+      expect([r.state.currentLines, r.state.face]).toEqual([['CEN'], n(9)]);
+    });
+
+    it('offers shared-track transfer lines together (Bank from the Central)', () => {
+      const s = london(['st:bank'], { top: 'st:chancery-lane' });
+      expect(s.currentLines).toEqual(['CEN']);
+      expect(lineChoices(card('st:bank', lu), s)).toEqual([['NOR'], ['CIR', 'DIS']]);
+      const r = ok(s, 'p0', { type: 'play', cardId: 'st:bank', chosenLines: ['CIR', 'DIS'] });
+      expect(r.state.currentLines).toEqual(['CIR', 'DIS']);
+    });
+
+    it('offers Hammersmith (H&C) the District and the Piccadilly', () => {
+      expect(lineChoices(card('st:hammersmith-hc', lu), { lines: [], sharedLines: lu.sharedLines, currentLines: ['H&C'] })).toEqual([
+        ['DIS'],
+        ['PIC'],
+      ]);
+    });
   });
 });
 
