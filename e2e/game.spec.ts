@@ -39,28 +39,58 @@ test.describe('setup', () => {
     await page.getByTestId('start').click();
     await page.getByTestId('hand').waitFor();
 
-    // Royal Oak sits on the merged Circle · Hammersmith & City · Metropolitan line.
+    // Royal Oak is served by the Circle and the Hammersmith & City.
     await arrange(page, { hands: { p0: ['st:royal-oak'] } });
     const card = page.getByTestId('hand').locator('[data-card="st:royal-oak"]');
-    await expect(card.locator('.card-band-part')).toHaveText(['CIR', 'H&C', 'MET']);
-    await expect(card.locator('.card-number')).toHaveText(/\d+/);
+    await expect(card.locator('.card-band-part')).toHaveText(['CIR', 'H&C']);
+    await expect(card.locator('.card-number')).toHaveText('8');
     await expect(card).toContainText('Royal Oak');
 
-    // With a merged-line card on top, the badge and line strip show that line.
-    const top = await page.evaluate(() => {
-      const s = window.__metroTest!.getState();
-      const all = [...s.drawPile, ...s.players.flatMap((p) => p.hand)];
-      return all.find((c) => c.kind === 'station' && c.line === 'SSR' && c.id !== 'st:royal-oak')!.id;
-    });
-    await arrange(page, { hands: { p0: ['st:royal-oak'] }, top });
-    await expect(page.getByTestId('current-line').locator('.line-code')).toHaveText(['CIR', 'H&C', 'MET']);
+    // With a Metropolitan action card on top, the badge and line strip show the Metropolitan alone.
+    await arrange(page, { hands: { p0: ['st:royal-oak'] }, top: 'act:terminus:MET' });
+    await expect(page.getByTestId('current-line').locator('.line-code')).toHaveText(['MET']);
     const strip = page.getByTestId('line-strip');
-    for (const station of ['royal-oak', 'finchley-road', 'aldgate']) await expect(strip.locator(`[data-station="${station}"]`)).toHaveCount(1);
+    for (const station of ['finchley-road', 'aldgate']) await expect(strip.locator(`[data-station="${station}"]`)).toHaveCount(1);
+    await expect(strip.locator('[data-station="royal-oak"]')).toHaveCount(0);
+    await expect(page.getByTestId('strip-tabs')).toHaveCount(0);
 
     await page.reload();
     await expect(page.getByTestId('start')).toBeVisible();
     await expect(page.getByTestId('map-london-underground')).toHaveClass(/is-selected/);
     await expect(page.getByTestId('map-name')).toHaveText('London Underground');
+  });
+
+  test('a multi-line station plays by its number from another line, with no prompt, and leaves both lines current', async ({ page }) => {
+    await page.goto('/?seed=london&aiDelay=60000');
+    await page.getByTestId('map-london-underground').click();
+    await page.getByTestId('start').click();
+    await page.getByTestId('hand').waitFor();
+
+    // Sloane Square is Circle | District 3. Put the Bakerloo's 3 on top.
+    const bakerloo3 = await page.evaluate(() => {
+      const s = window.__metroTest!.getState();
+      const all = [...s.drawPile, ...s.discard, ...s.players.flatMap((p) => p.hand)];
+      return all.find((c) => c.kind === 'station' && c.line === 'BAK' && c.number === 3)!.id;
+    });
+    await arrange(page, { hands: { p0: ['st:sloane-square', 'st:angel', 'st:borough'] }, top: bakerloo3 });
+    await expect(page.getByTestId('current-line')).toHaveAttribute('data-line', 'BAK');
+    const card = page.getByTestId('hand').locator('[data-card="st:sloane-square"]');
+    await expect(card.locator('.card-band-part')).toHaveText(['CIR', 'DIS']);
+    await expect(card).toHaveClass(/is-playable/);
+
+    await card.click();
+    await expect(page.getByTestId('line-chooser')).toHaveCount(0);
+    await expect(page.getByTestId('discard-top')).toHaveAttribute('data-card', 'st:sloane-square');
+    await expect(page.getByTestId('current-line')).toHaveAttribute('data-line', 'CIR+DIS');
+    await expect(page.getByTestId('log')).toContainText('Now on the Circle / District');
+
+    // The strip starts on the Circle; the District tab shows the District.
+    const strip = page.getByTestId('line-strip');
+    await expect(strip).toHaveAttribute('aria-label', 'Circle');
+    await expect(strip.locator('[aria-current="location"]')).toHaveAttribute('data-station', 'sloane-square');
+    await page.getByTestId('strip-tabs').getByRole('button', { name: 'District' }).click();
+    await expect(strip).toHaveAttribute('aria-label', 'District');
+    await expect(strip.locator('[aria-current="location"]')).toHaveAttribute('data-station', 'sloane-square');
   });
 });
 

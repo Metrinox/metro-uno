@@ -100,7 +100,7 @@ The working tree holds an implementation of this change's earlier version (numbe
 
 ## 4. Final checks
 
-- [ ] 4.1 Replace the numbered-interchange e2e case in `e2e/game.spec.ts`. In a London round, a multi-line station in hand is playable by its number from another line, plays without a prompt, and leaves both its lines current, with a tab to show each line's map. Verify that `npm run e2e -- game.spec.ts` passes.
+- [x] 4.1 Replace the numbered-interchange e2e case in `e2e/game.spec.ts`. In a London round, a multi-line station in hand is playable by its number from another line, plays without a prompt, and leaves both its lines current, with a tab to show each line's map. Verify that `npm run e2e -- game.spec.ts` passes.
 - [ ] 4.2 Run `npx tsc -b`, `npm run lint`, `npm test` (which includes the worker tests), and `npm run e2e`. Verify that they all pass.
 
 ## Workflow follow-up
