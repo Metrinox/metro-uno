@@ -515,12 +515,14 @@ legend {
 /* ---------- Line strip ---------- */
 
 .line-strip {
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: auto;
   scrollbar-width: thin;
   background: var(--surface);
   border-radius: 12px;
-  flex: 0 0 auto;
+  /* Shrinks, scrolling inside its box, only when the table would not fit the screen
+     (the District below its tabs at 360×640). */
+  flex: 0 1 auto;
+  min-height: 58px;
 }
 .line-strip svg {
   display: block;
@@ -1169,6 +1171,27 @@ button.card {
   }
   .card-interchange .card-transfer {
     padding-top: 1px;
+  }
+  /* A three-label band at the top of a card (e.g. King's Cross St Pancras): its
+     labels keep clear of the card's edge and rounded corners. */
+  .card-bands > .card-band:first-child:has(.card-band-part + .card-band-part + .card-band-part) {
+    font-size: 0.42rem;
+  }
+  .card-bands > .card-band:first-child:has(.card-band-part + .card-band-part + .card-band-part) .card-band-part {
+    padding-top: 3px;
+  }
+  .card-bands > .card-band:first-child:has(.card-band-part + .card-band-part + .card-band-part) .card-band-part:first-child {
+    padding-left: 3px;
+  }
+  .card-bands > .card-band:first-child:has(.card-band-part + .card-band-part + .card-band-part) .card-band-part:last-child {
+    padding-right: 3px;
+  }
+  /* A multi-line station's transfer marker (e.g. Monument) stays on one row, clear of its number. */
+  .card-head:has(> .card-band[data-line*='+']) .card-transfer {
+    flex-wrap: nowrap;
+    gap: 1px;
+    padding-inline: 1px;
+    font-size: 0.46rem;
   }
 }
 @media (min-width: 720px) {

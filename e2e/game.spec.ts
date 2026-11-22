@@ -82,6 +82,32 @@ test.describe('table', () => {
     });
   }
 
+  for (const [label, top, tabs] of [
+    ['two', 'st:sloane-square', ['CIR', 'DIS']],
+    ['three', 'st:edgware-road-circle', ['CIR', 'H&C', 'DIS']],
+  ] as const) {
+    test(`fits a phone with ${label} current lines, whichever line the strip draws`, async ({ page }) => {
+      await page.setViewportSize(PHONE);
+      await page.goto('/?seed=london&aiDelay=60000');
+      await page.getByTestId('map-london-underground').click();
+      await page.locator('.segmented label', { has: page.locator('input[name="opponents"][value="3"]') }).click();
+      await page.getByTestId('start').click();
+      await page.getByTestId('hand').waitFor();
+      await arrange(page, { top });
+      const buttons = page.getByTestId('strip-tabs').getByRole('button');
+      await expect(buttons).toHaveText([...tabs]);
+      for (const code of tabs) {
+        await buttons.filter({ hasText: code }).click();
+        await expect(buttons.filter({ hasText: code })).toHaveAttribute('aria-pressed', 'true');
+        for (const id of ['hand', 'discard-top', 'draw-pile', 'turn', 'direction', 'current-line', 'strip-tabs', 'line-strip']) {
+          await expect(page.getByTestId(id), `${code}: ${id}`).toBeInViewport({ ratio: 1 });
+        }
+        await expect(page.getByTestId('line-strip').locator('[aria-current="location"]')).toHaveAttribute('data-station', top.slice(3));
+        await noPageScroll(page);
+      }
+    });
+  }
+
   test('marks playable cards and refuses unplayable ones', async ({ page }) => {
     await startGame(page);
     await arrange(page, { hands: { p0: ['st:tai-koo', 'st:che-kung-temple', 'st:jordan'] }, top: 'st:sai-ying-pun' });

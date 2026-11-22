@@ -110,6 +110,7 @@ Validation fails in any of these cases:
   - It takes `lines: string[]` and always draws one line, so the strip is never taller than a single line's.
   - With several current lines it draws the first (in `sharedTrack.lines` order) and shows a small tab per current line above the strip (e.g. CIR | DIS). Choosing a tab draws that line. The choice is local display state and resets to the first line whenever the current lines change.
   - `lineLayout` is unchanged.
+  - When the table would not fit the screen (the District below its tabs at 360×640), the strip gives up the missing height and scrolls inside its own box, centred on the top card's station.
 
   *Alternative:* a merged map drawing every current line in one strip. Rejected: those maps were up to 55 stations across several rows and pushed the hand off a 360×640 screen.
 - **`GameScreen`:**

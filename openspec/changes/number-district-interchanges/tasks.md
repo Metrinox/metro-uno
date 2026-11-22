@@ -91,7 +91,7 @@ The working tree holds an implementation of this change's earlier version (numbe
   - the CIR, DIS, H&C and MET groups each hold only their three action cards;
   - the Chinese heading is 淺層綫;
   - Hong Kong is unchanged at 130 cards.
-- [ ] 3.6 Review the gallery and a London round at 360×640 and 1280×800, and fix any problem found. In particular:
+- [x] 3.6 Review the gallery and a London round at 360×640 and 1280×800, and fix any problem found. In particular:
   - King's Cross, Baker Street, Paddington and Hammersmith (H&C), whose bands come with a transfer marker;
   - the four subsurface line maps and the strip's tabs;
   - the table with two and three current lines.

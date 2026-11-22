@@ -90,6 +90,7 @@ export function LineStrip({ lines, highlightStation }: { lines: string[]; highli
     const p = highlightStation ? where.get(highlightStation) : undefined;
     // Scroll only the strip itself, never the page.
     el.scrollLeft = p ? p.x - el.clientWidth / 2 : 0;
+    el.scrollTop = p ? p.y - el.clientHeight / 2 : 0;
   }, [def, highlightStation, where]);
 
   const strip = (
