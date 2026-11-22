@@ -3,13 +3,14 @@ import { LineBadge } from '../lines/LineBadge';
 import { useLang } from '../i18n/LangContext';
 
 interface Props {
-  lines: string[];
-  onChoose: (line: string) => void;
+  /** Allowed options; an option of several shared-track lines is one choice. */
+  options: string[][];
+  onChoose: (lines: string[]) => void;
   onCancel: () => void;
 }
 
-/** Modal asking which line to change to. Only the allowed lines are offered. */
-export function LineChooser({ lines, onChoose, onCancel }: Props) {
+/** Modal asking which line to change to. Only the allowed options are offered. */
+export function LineChooser({ options, onChoose, onCancel }: Props) {
   const { t } = useLang();
   const first = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDivElement>(null);
@@ -40,9 +41,16 @@ export function LineChooser({ lines, onChoose, onCancel }: Props) {
       <div className="dialog" role="dialog" aria-modal="true" aria-labelledby="choose-line-title" ref={dialog} data-testid="line-chooser">
         <h2 id="choose-line-title">{t.chooseLine}</h2>
         <div className="line-options">
-          {lines.map((code, i) => (
-            <button key={code} type="button" className="line-option" ref={i === 0 ? first : undefined} onClick={() => onChoose(code)} data-line={code}>
-              <LineBadge code={code} />
+          {options.map((option, i) => (
+            <button
+              key={option.join('+')}
+              type="button"
+              className="line-option"
+              ref={i === 0 ? first : undefined}
+              onClick={() => onChoose(option)}
+              data-line={option.join('+')}
+            >
+              <LineBadge codes={option} />
             </button>
           ))}
         </div>

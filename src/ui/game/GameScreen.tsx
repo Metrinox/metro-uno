@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import type { Network } from '../../data/network';
-import type { Card } from '../../engine/cards';
+import { cardLines, type Card } from '../../engine/cards';
 import { canPlay, isPlayable, lineChoices, sameNumberCards } from '../../engine/game';
 import { CardView } from '../cards/CardView';
 import { cardName, handOrder, linesName } from '../i18n/format';
@@ -64,7 +64,7 @@ export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }
   const { lang, t } = useLang();
   const network = useNetwork();
   const { view, seats, log, send, reject } = controller;
-  const [choosing, setChoosing] = useState<{ cards: Card[]; lines: string[] } | null>(null);
+  const [choosing, setChoosing] = useState<{ cards: Card[]; options: string[][] } | null>(null);
   const [grouping, setGrouping] = useState<{ first: Card; others: Card[] } | null>(null);
   const [unoArmed, setUnoArmed] = useState(false);
 
@@ -80,9 +80,9 @@ export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }
   // Two cards, or more when same-number cards can be played together.
   const unoAvailable = myTurn && view.hand.length >= 2 && (view.hand.length === 2 || view.rules.playSameNumbers);
   const pending = view.pendingDraw;
+  // The top card's station, when it is on a current line (the strip marks it on whichever of them it draws).
   const highlightStation =
-    (top.kind === 'station' && view.currentLines.includes(top.line)) ||
-    (top.kind === 'interchange' && top.lines.some((l) => view.currentLines.includes(l)))
+    (top.kind === 'station' || top.kind === 'interchange') && cardLines(top).some((l) => view.currentLines.includes(l))
       ? top.stationId
       : null;
 
@@ -106,7 +106,7 @@ export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }
   const playWithLine = (cards: Card[]) => {
     const options = lineChoices(cards[cards.length - 1]!, view);
     // Ask only when there is a real choice; a 2-line interchange changes line on its own.
-    if (options && options.length > 1) setChoosing({ cards, lines: options.map((o) => o[0]!) });
+    if (options && options.length > 1) setChoosing({ cards, options });
     else play(cards, options?.[0]);
   };
 
@@ -183,7 +183,7 @@ export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }
       <section className="table" aria-label={t.currentLine}>
         <div className="table-info">
           <span className="label">{t.currentLine}</span>
-          <LineBadge code={view.currentLines[0]!} testId="current-line" />
+          <LineBadge codes={view.currentLines} testId="current-line" />
           <span className="direction" data-testid="direction" title={t.direction}>
             {view.direction === 1 ? '↻' : '↺'} {view.direction === 1 ? t.clockwise : t.anticlockwise}
           </span>
@@ -284,12 +284,12 @@ export function GameScreen({ controller, menuLabel, onMenu, endActions, banner }
 
       {choosing && (
         <LineChooser
-          lines={choosing.lines}
+          options={choosing.options}
           onCancel={() => setChoosing(null)}
           onChoose={(line) => {
             const cards = choosing.cards;
             setChoosing(null);
-            play(cards, [line]);
+            play(cards, line);
           }}
         />
       )}

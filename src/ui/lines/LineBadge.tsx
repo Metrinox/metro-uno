@@ -1,13 +1,15 @@
-import { lineName, textOn } from '../i18n/format';
+import { linesName, textOn } from '../i18n/format';
 import { useLang } from '../i18n/LangContext';
 import { useNetwork } from '../common/NetworkContext';
 
-export function LineBadge({ code, testId }: { code: string; testId?: string }) {
+/** A line's labels and name; or several shared-track lines current together, as one badge ("Circle / District"). */
+export function LineBadge({ code, codes, testId }: { code?: string; codes?: string[]; testId?: string }) {
   const { lang } = useLang();
   const network = useNetwork();
-  const labels = network.lineByCode[code]!.labels;
+  const list = codes ?? [code!];
+  const labels = list.flatMap((c) => network.lineByCode[c]!.labels);
   return (
-    <span className="line-badge" data-testid={testId} data-line={code}>
+    <span className="line-badge" data-testid={testId} data-line={list.join('+')}>
       <span className="line-codes">
         {labels.map((l) => (
           <span key={l.code} className="line-code" style={{ background: l.colour, color: textOn(l.colour) }}>
@@ -15,7 +17,7 @@ export function LineBadge({ code, testId }: { code: string; testId?: string }) {
           </span>
         ))}
       </span>
-      <span className="line-name">{lineName(network, code, lang)}</span>
+      <span className="line-name">{linesName(network, list, lang)}</span>
     </span>
   );
 }
